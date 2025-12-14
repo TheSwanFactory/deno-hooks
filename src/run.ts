@@ -1,11 +1,23 @@
 #!/usr/bin/env -S deno run -A
 
 /**
- * Run git hooks
+ * Git hooks execution entrypoint
  *
- * This is called by git hook wrapper scripts.
- * It loads the configuration, finds matching hooks,
- * executes them, and reports results.
+ * This module runs configured git hooks for a specific trigger.
+ * Typically called by git hook wrapper scripts, but can also be used programmatically.
+ *
+ * @example CLI usage
+ * ```bash
+ * deno run -A jsr:@theswanfactory/deno-hooks/run pre-commit
+ * ```
+ *
+ * @example Programmatic usage
+ * ```ts
+ * import { run } from "@theswanfactory/deno-hooks/run";
+ * const exitCode = await run("pre-commit");
+ * ```
+ *
+ * @module
  */
 
 import { getHooksForTrigger, loadConfig } from "./config.ts";

@@ -1,13 +1,23 @@
 #!/usr/bin/env -S deno run -A
 
 /**
- * Install git hooks
+ * Git hooks installation entrypoint
  *
- * This script:
- * 1. Validates configuration exists
- * 2. Creates .git/hooks/ directory if needed
- * 3. Generates shell wrapper scripts for each configured hook
- * 4. Makes scripts executable
+ * This module provides functionality to install git hooks from your configuration.
+ * It can be used as a CLI script or imported programmatically.
+ *
+ * @example CLI usage
+ * ```bash
+ * deno run -A jsr:@theswanfactory/deno-hooks/install
+ * ```
+ *
+ * @example Programmatic usage
+ * ```ts
+ * import { install } from "@theswanfactory/deno-hooks/install";
+ * await install();
+ * ```
+ *
+ * @module
  */
 
 import { ensureDir } from "@std/fs";

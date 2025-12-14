@@ -78,7 +78,7 @@ Run any command:
 
 ## Project Structure
 
-```
+```tree
 deno-hooks/
 ├── src/               # Source code
 │   ├── mod.ts        # Main exports
@@ -105,7 +105,5 @@ including:
 
 ## Resources
 
-- **Spec**:
-  [doc/spec/2-deno-hooks/README.md](../doc/spec/2-deno-hooks/README.md)
 - **Git Hooks**: [git-scm.com/docs/githooks](https://git-scm.com/docs/githooks)
 - **Pre-commit** (inspiration): [pre-commit.com](https://pre-commit.com/)

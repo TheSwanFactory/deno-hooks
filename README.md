@@ -171,14 +171,6 @@ OIDC:
 See [.github/workflows/publish.yml](.github/workflows/publish.yml) for the
 workflow configuration.
 
-## Development Status
-
-**Version**: 0.1.2 **Status**: Active development
-
-Originally developed as part of the
-[hclang](https://github.com/TheSwanFactory/hclang) project, now available as a
-standalone package on [JSR](https://jsr.io/@theswanfactory/deno-hooks).
-
 ## Contributing
 
 Contributions welcome! Please ensure:
@@ -186,6 +178,8 @@ Contributions welcome! Please ensure:
 - All tests pass: `deno test -A`
 - Code is formatted: `deno fmt`
 - Code is linted: `deno lint`
+
+See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ## License
 

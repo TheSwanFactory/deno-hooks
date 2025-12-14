@@ -1,5 +1,5 @@
 {
-  "name": "@data-yaml/deno-hooks",
+  "name": "@theswanfactory/deno-hooks",
   "version": "0.1.0",
   "exports": {
     ".": "./mod.ts",

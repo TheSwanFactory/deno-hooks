@@ -238,7 +238,7 @@ cat .git/hooks/pre-commit
 
 ### Phase 3 (Future)
 
-- Publish to JSR as `@data-yaml/deno-hooks`
+- Publish to JSR as `@theswanfactory/deno-hooks`
 - Extract to separate repository
 - CI/CD integration guides
 - Migration tool from pre-commit

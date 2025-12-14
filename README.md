@@ -35,7 +35,13 @@ hooks:
 ### 2. Install Hooks
 
 ```bash
-deno run -A deno-hooks/install.ts
+deno task setup
+```
+
+Or manually:
+
+```bash
+deno run -A src/install.ts
 ```
 
 ### 3. Commit!

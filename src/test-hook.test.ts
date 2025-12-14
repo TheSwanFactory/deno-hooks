@@ -7,8 +7,8 @@ import { loadConfig } from "./config.ts";
 import { filterFiles, getStagedFiles } from "./files.ts";
 
 Deno.test("loadConfig - parses YAML configuration", async () => {
-  // Use current directory where deno-hooks.yml is located
-  const rootDir = new URL(".", import.meta.url).pathname;
+  // Use parent directory where deno-hooks.yml is located
+  const rootDir = new URL("..", import.meta.url).pathname;
   const config = await loadConfig(rootDir);
   expect(config).toBeDefined();
   expect(config.hooks).toBeDefined();

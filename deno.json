@@ -1,13 +1,14 @@
 {
   "name": "@theswanfactory/deno-hooks",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "exports": {
-    ".": "./mod.ts",
-    "./install": "./install.ts",
-    "./run": "./run.ts"
+    ".": "./src/mod.ts",
+    "./install": "./src/install.ts",
+    "./run": "./src/run.ts"
   },
   "tasks": {
-    "install": "deno run -A install.ts",
+    "setup": "deno run -A src/install.ts",
+    "install": "deno run -A src/install.ts",
     "test": "deno test -A"
   },
   "fmt": {

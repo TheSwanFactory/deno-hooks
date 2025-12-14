@@ -9,7 +9,10 @@
   "tasks": {
     "setup": "deno run -A src/install.ts",
     "install": "deno run -A src/install.ts",
-    "test": "deno test -A"
+    "test": "deno test -A",
+    "coverage": "deno test -A --coverage=.coverage && deno coverage .coverage",
+    "doc": "deno doc src/mod.ts",
+    "doc-coverage": "deno run -A scripts/doc-coverage.ts"
   },
   "fmt": {
     "exclude": []

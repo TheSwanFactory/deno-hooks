@@ -1,0 +1,17 @@
+# Deno
+deno.lock
+.deno/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test outputs
+coverage/

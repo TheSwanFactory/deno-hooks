@@ -20,6 +20,29 @@ import type { HookResult } from "./hook.ts";
 
 /**
  * Run hooks for a specific git trigger
+ *
+ * This function:
+ * 1. Loads the project configuration
+ * 2. Gets hooks configured for the specified trigger
+ * 3. For pre-commit, filters to staged files only
+ * 4. Executes each hook sequentially
+ * 5. Reports results and returns exit code
+ *
+ * @param hookName - The git hook trigger name (e.g., "pre-commit", "pre-push")
+ * @returns Exit code (0 = success, 1 = failure)
+ *
+ * @throws {Error} If not in a git repository
+ * @throws {Error} If configuration is invalid
+ *
+ * @example
+ * ```ts
+ * import { run } from "@theswanfactory/deno-hooks";
+ *
+ * const exitCode = await run("pre-commit");
+ * if (exitCode !== 0) {
+ *   Deno.exit(exitCode);
+ * }
+ * ```
  */
 export async function run(hookName: string): Promise<number> {
   try {

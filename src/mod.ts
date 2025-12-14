@@ -1,6 +1,44 @@
 /**
  * Deno Hooks - A zero-dependency git hooks framework for Deno
  *
+ * This module provides a declarative way to configure and run git hooks
+ * using pure TypeScript without requiring Python (pre-commit) or Node.js (Husky).
+ *
+ * @example Basic usage
+ * ```ts
+ * import { install } from "@theswanfactory/deno-hooks";
+ *
+ * // Install git hooks based on deno-hooks.yml configuration
+ * await install();
+ * ```
+ *
+ * @example Programmatic hook execution
+ * ```ts
+ * import { run } from "@theswanfactory/deno-hooks";
+ *
+ * // Run pre-commit hooks
+ * const exitCode = await run("pre-commit");
+ * Deno.exit(exitCode);
+ * ```
+ *
+ * @example Configuration types
+ * ```ts
+ * import type { Config, Hook } from "@theswanfactory/deno-hooks";
+ *
+ * const config: Config = {
+ *   hooks: {
+ *     "pre-commit": [
+ *       {
+ *         id: "deno-fmt",
+ *         run: "deno-fmt",
+ *         glob: "*.{ts,js,json,md}",
+ *         pass_filenames: true,
+ *       },
+ *     ],
+ *   },
+ * };
+ * ```
+ *
  * @module
  */
 

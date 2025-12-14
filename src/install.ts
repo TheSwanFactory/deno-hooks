@@ -15,7 +15,24 @@ import { loadConfig } from "./config.ts";
 import { getGitRoot } from "./files.ts";
 
 /**
- * Install git hooks
+ * Install git hooks based on the project configuration
+ *
+ * This function:
+ * 1. Validates that configuration exists (deno-hooks.yml or deno.json)
+ * 2. Creates .git/hooks/ directory if needed
+ * 3. Generates shell wrapper scripts for each configured hook
+ * 4. Makes scripts executable (Unix/Linux/macOS)
+ *
+ * @throws {Error} If not in a git repository
+ * @throws {Error} If no configuration found
+ * @throws {Error} If configuration is invalid
+ *
+ * @example
+ * ```ts
+ * import { install } from "@theswanfactory/deno-hooks";
+ *
+ * await install();
+ * ```
  */
 export async function install(): Promise<void> {
   console.log("🦕 Installing Deno Hooks...\n");

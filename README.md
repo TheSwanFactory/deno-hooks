@@ -83,13 +83,109 @@ hooks:
       pass_filenames: true
 ```
 
+## Advanced Examples
+
+### Multiple Hooks with Different Patterns
+
+```yaml
+hooks:
+  pre-commit:
+    # Format only specific file types
+    - id: fmt-ts
+      run: deno-fmt
+      glob: "*.{ts,tsx}"
+      pass_filenames: true
+
+    # Lint with exclusions
+    - id: lint-src
+      run: deno-lint
+      glob: "src/**/*.ts"
+      exclude: "**/*.test.ts"
+      pass_filenames: true
+
+    # Custom script
+    - id: check-todos
+      name: "Check for TODO comments"
+      run: "deno run -A scripts/check-todos.ts"
+      glob: "*.ts"
+
+  pre-push:
+    # Run all tests before push
+    - id: test
+      name: "Run test suite"
+      run: deno-test
+
+    # Type check
+    - id: type-check
+      run: "deno check src/mod.ts"
+```
+
+### Using in deno.json
+
+```json
+{
+  "name": "@yourorg/yourproject",
+  "version": "1.0.0",
+  "deno-hooks": {
+    "hooks": {
+      "pre-commit": [
+        {
+          "id": "deno-fmt",
+          "glob": "*.{ts,js,json,md}",
+          "pass_filenames": true
+        }
+      ]
+    }
+  },
+  "tasks": {
+    "setup": "deno run -A jsr:@theswanfactory/deno-hooks/install"
+  }
+}
+```
+
+### Programmatic Usage
+
+```ts
+import { install, run } from "@theswanfactory/deno-hooks";
+
+// Install hooks programmatically
+await install();
+
+// Or run hooks manually
+const exitCode = await run("pre-commit");
+if (exitCode !== 0) {
+  console.error("Hooks failed!");
+  Deno.exit(exitCode);
+}
+```
+
+## CI/CD Integration
+
+This package is published to JSR with provenance enabled through GitHub Actions
+OIDC:
+
+- Automated publishing on version tags
+- Built-in security with OIDC authentication
+- Transparent supply chain with provenance attestation
+
+See [.github/workflows/publish.yml](.github/workflows/publish.yml) for the
+workflow configuration.
+
 ## Development Status
 
-**Version**: 0.1.0 (MVP) **Status**: In development
+**Version**: 0.1.2 **Status**: Active development
 
-This is currently being developed as part of the
-[hclang](https://github.com/TheSwanFactory/hclang) project and will be extracted
-to its own repository once stable.
+Originally developed as part of the
+[hclang](https://github.com/TheSwanFactory/hclang) project, now available as a
+standalone package on [JSR](https://jsr.io/@theswanfactory/deno-hooks).
+
+## Contributing
+
+Contributions welcome! Please ensure:
+
+- All tests pass: `deno test -A`
+- Code is formatted: `deno fmt`
+- Code is linted: `deno lint`
 
 ## License
 

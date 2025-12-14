@@ -2,7 +2,9 @@
 
 ## Overview
 
-Deno Hooks is a zero-dependency git hooks framework built in pure TypeScript for Deno projects. It provides a declarative way to configure and run git hooks without requiring Python (pre-commit) or Node.js (Husky) dependencies.
+Deno Hooks is a zero-dependency git hooks framework built in pure TypeScript for
+Deno projects. It provides a declarative way to configure and run git hooks
+without requiring Python (pre-commit) or Node.js (Husky) dependencies.
 
 ## Quick Start
 
@@ -92,7 +94,8 @@ deno-hooks/
 
 ## Development
 
-See [src/CLAUDE.md](src/CLAUDE.md) for detailed developer documentation including:
+See [src/CLAUDE.md](src/CLAUDE.md) for detailed developer documentation
+including:
 
 - Architecture and how it works
 - Adding built-in hooks
@@ -102,6 +105,7 @@ See [src/CLAUDE.md](src/CLAUDE.md) for detailed developer documentation includin
 
 ## Resources
 
-- **Spec**: [doc/spec/2-deno-hooks/README.md](../doc/spec/2-deno-hooks/README.md)
+- **Spec**:
+  [doc/spec/2-deno-hooks/README.md](../doc/spec/2-deno-hooks/README.md)
 - **Git Hooks**: [git-scm.com/docs/githooks](https://git-scm.com/docs/githooks)
 - **Pre-commit** (inspiration): [pre-commit.com](https://pre-commit.com/)

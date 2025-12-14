@@ -91,7 +91,8 @@ cat .git/hooks/pre-commit
 
 ## Current Limitations (MVP)
 
-1. **Sequential Execution**: Hooks run one at a time (parallel execution planned for Phase 2)
+1. **Sequential Execution**: Hooks run one at a time (parallel execution planned
+   for Phase 2)
 2. **Limited Built-ins**: Only fmt, lint, test (more planned)
 3. **Simple Glob Matching**: No `**` or complex patterns yet
 4. **No Hook Dependencies**: Can't specify hook execution order
@@ -201,6 +202,7 @@ deno eval "import { filterFiles } from './src/files.ts'; console.log(filterFiles
 
 ## Resources
 
-- **Spec**: [doc/spec/2-deno-hooks/README.md](../../doc/spec/2-deno-hooks/README.md)
+- **Spec**:
+  [doc/spec/2-deno-hooks/README.md](../../doc/spec/2-deno-hooks/README.md)
 - **Git Hooks**: [git-scm.com/docs/githooks](https://git-scm.com/docs/githooks)
 - **Pre-commit** (inspiration): [pre-commit.com](https://pre-commit.com/)

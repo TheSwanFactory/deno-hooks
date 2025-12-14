@@ -3,7 +3,7 @@ name: Publish to JSR
 on:
   push:
     tags:
-      - 'v*.*.*'  # Triggers on version tags like v0.1.0, v1.2.3, etc.
+      - "v*.*.*" # Triggers on version tags like v0.1.0, v1.2.3, etc.
 
 jobs:
   publish:
@@ -11,7 +11,7 @@ jobs:
 
     permissions:
       contents: read
-      id-token: write  # Required for OIDC authentication with JSR
+      id-token: write # Required for OIDC authentication with JSR
 
     steps:
       - name: Checkout code

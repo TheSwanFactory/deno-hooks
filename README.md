@@ -44,7 +44,7 @@ Or manually:
 deno run -A src/install.ts
 ```
 
-### 3. Commit!
+### 3. Commit
 
 ```bash
 git commit -m "Your changes"

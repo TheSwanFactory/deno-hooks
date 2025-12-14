@@ -87,7 +87,10 @@ if (import.meta.main) {
   try {
     await install();
   } catch (error) {
-    console.error("\n❌ Installation failed:", error.message);
+    console.error(
+      "\n❌ Installation failed:",
+      error instanceof Error ? error.message : String(error),
+    );
     Deno.exit(1);
   }
 }

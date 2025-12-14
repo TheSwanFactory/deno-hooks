@@ -51,13 +51,13 @@ git commit -m "Your changes"
 
 ```yaml
 hooks:
-  <hook-name>:  # e.g., pre-commit, pre-push
-    - id: <hook-id>          # Unique identifier
-      name: <display-name>   # Optional display name
-      run: <command>         # Command to run or built-in hook name
-      glob: <pattern>        # File pattern (e.g., "*.ts")
-      pass_filenames: true   # Pass matched files as arguments
-      exclude: <pattern>     # Exclude pattern
+  <hook-name>: # e.g., pre-commit, pre-push
+    - id: <hook-id> # Unique identifier
+      name: <display-name> # Optional display name
+      run: <command> # Command to run or built-in hook name
+      glob: <pattern> # File pattern (e.g., "*.ts")
+      pass_filenames: true # Pass matched files as arguments
+      exclude: <pattern> # Exclude pattern
 ```
 
 ### Built-in Hooks
@@ -79,10 +79,11 @@ hooks:
 
 ## Development Status
 
-**Version**: 0.1.0 (MVP)
-**Status**: In development
+**Version**: 0.1.0 (MVP) **Status**: In development
 
-This is currently being developed as part of the [hclang](https://github.com/TheSwanFactory/hclang) project and will be extracted to its own repository once stable.
+This is currently being developed as part of the
+[hclang](https://github.com/TheSwanFactory/hclang) project and will be extracted
+to its own repository once stable.
 
 ## License
 

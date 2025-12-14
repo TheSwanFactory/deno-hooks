@@ -2,7 +2,9 @@
 
 ## Overview
 
-Deno Hooks is a zero-dependency git hooks framework built in pure TypeScript for Deno projects. It provides a declarative way to configure and run git hooks without requiring Python (pre-commit) or Node.js (Husky) dependencies.
+Deno Hooks is a zero-dependency git hooks framework built in pure TypeScript for
+Deno projects. It provides a declarative way to configure and run git hooks
+without requiring Python (pre-commit) or Node.js (Husky) dependencies.
 
 ## Architecture
 
@@ -102,7 +104,8 @@ hooks:
 
 ### deno-fmt
 
-Formats code with `deno fmt`. Runs in check mode first, then auto-formats if needed.
+Formats code with `deno fmt`. Runs in check mode first, then auto-formats if
+needed.
 
 ```yaml
 - id: fmt
@@ -145,7 +148,8 @@ hooks:
       pass_filenames: true
 ```
 
-The command will be executed with matched files as arguments if `pass_filenames: true`.
+The command will be executed with matched files as arguments if
+`pass_filenames: true`.
 
 ## File Filtering
 
@@ -214,7 +218,8 @@ cat .git/hooks/pre-commit
 
 ## Current Limitations (MVP)
 
-1. **Sequential Execution**: Hooks run one at a time (parallel execution planned for Phase 2)
+1. **Sequential Execution**: Hooks run one at a time (parallel execution planned
+   for Phase 2)
 2. **Limited Built-ins**: Only fmt, lint, test (more planned)
 3. **Simple Glob Matching**: No `**` or complex patterns yet
 4. **No Hook Dependencies**: Can't specify hook execution order
@@ -284,12 +289,14 @@ hooks:
 ### Hooks Not Running
 
 Check that hooks are installed:
+
 ```bash
 ls -la .git/hooks/pre-commit
 cat .git/hooks/pre-commit
 ```
 
 Reinstall if needed:
+
 ```bash
 deno task setup
 ```
@@ -297,11 +304,13 @@ deno task setup
 ### Configuration Errors
 
 Validate configuration:
+
 ```bash
 deno run -A deno-hooks/run.ts pre-commit
 ```
 
 Check YAML syntax:
+
 ```bash
 deno eval "import { parse } from '@std/yaml'; console.log(parse(await Deno.readTextFile('deno-hooks.yml')))"
 ```
@@ -309,6 +318,7 @@ deno eval "import { parse } from '@std/yaml'; console.log(parse(await Deno.readT
 ### Hooks Passing When They Shouldn't
 
 Check that files match glob patterns:
+
 ```bash
 # Get staged files
 git diff --cached --name-only
@@ -319,6 +329,7 @@ deno eval "import { filterFiles } from './deno-hooks/files.ts'; console.log(filt
 
 ## Resources
 
-- **Spec**: [doc/spec/2-deno-hooks/README.md](../doc/spec/2-deno-hooks/README.md)
+- **Spec**:
+  [doc/spec/2-deno-hooks/README.md](../doc/spec/2-deno-hooks/README.md)
 - **Git Hooks**: [git-scm.com/docs/githooks](https://git-scm.com/docs/githooks)
 - **Pre-commit** (inspiration): [pre-commit.com](https://pre-commit.com/)

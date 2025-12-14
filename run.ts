@@ -9,7 +9,12 @@
  */
 
 import { getHooksForTrigger, loadConfig } from "./config.ts";
-import { filterFiles, getGitRoot, getStagedFiles, isExcluded } from "./files.ts";
+import {
+  filterFiles,
+  getGitRoot,
+  getStagedFiles,
+  isExcluded,
+} from "./files.ts";
 import { executeHook } from "./executor.ts";
 import type { HookResult } from "./hook.ts";
 
@@ -58,7 +63,9 @@ export async function run(hookName: string): Promise<number> {
 
         // Apply exclude pattern if specified
         if (hook.exclude) {
-          matchedFiles = matchedFiles.filter((f) => !isExcluded(f, [hook.exclude!]));
+          matchedFiles = matchedFiles.filter((f) =>
+            !isExcluded(f, [hook.exclude!])
+          );
         }
 
         // Skip if no files match
@@ -105,7 +112,10 @@ export async function run(hookName: string): Promise<number> {
       return 1;
     }
   } catch (error) {
-    console.error("\n❌ Error:", error.message);
+    console.error(
+      "\n❌ Error:",
+      error instanceof Error ? error.message : String(error),
+    );
     return 1;
   }
 }

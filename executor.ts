@@ -23,7 +23,9 @@ export async function executeHook(ctx: HookContext): Promise<HookResult> {
 /**
  * Get built-in hook implementation
  */
-function getBuiltInHook(name: string): ((ctx: HookContext) => Promise<HookResult>) | null {
+function getBuiltInHook(
+  name: string,
+): ((ctx: HookContext) => Promise<HookResult>) | null {
   const builtIns: Record<string, (ctx: HookContext) => Promise<HookResult>> = {
     "deno-fmt": denoFmt,
     "deno-lint": denoLint,
@@ -100,7 +102,8 @@ async function denoFmt(ctx: HookContext): Promise<HookResult> {
     const error = new TextDecoder().decode(stderr);
     return {
       success: false,
-      message: `Formatted ${files.length} file(s). Re-stage and commit.\n${error}`,
+      message:
+        `Formatted ${files.length} file(s). Re-stage and commit.\n${error}`,
       files,
     };
   }

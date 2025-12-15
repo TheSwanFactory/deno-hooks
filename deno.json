@@ -1,14 +1,19 @@
 {
-  "name": "@data-yaml/deno-hooks",
-  "version": "0.1.0",
+  "name": "@theswanfactory/deno-hooks",
+  "version": "0.2.0",
   "exports": {
-    ".": "./mod.ts",
-    "./install": "./install.ts",
-    "./run": "./run.ts"
+    ".": "./src/mod.ts",
+    "./install": "./src/install.ts",
+    "./run": "./src/run.ts"
   },
   "tasks": {
-    "install": "deno run -A install.ts",
-    "test": "deno test -A"
+    "setup": "deno run -A src/install.ts",
+    "install": "deno run -A src/install.ts",
+    "test": "deno test -A",
+    "test-integration": "deno run -A scripts/test-fake-repo.ts",
+    "coverage": "deno test -A --coverage=.coverage && deno coverage .coverage",
+    "doc": "deno doc src/mod.ts",
+    "doc-coverage": "deno run -A scripts/doc-coverage.ts"
   },
   "fmt": {
     "exclude": []

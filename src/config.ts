@@ -35,6 +35,24 @@ export interface Config {
 
 /**
  * Load configuration from deno-hooks.yml or deno.json
+ *
+ * Tries to load configuration in this order:
+ * 1. deno-hooks.yml (YAML format)
+ * 2. deno.json with "deno-hooks" key (JSON format)
+ *
+ * @param rootDir - The git repository root directory
+ * @returns Parsed and validated configuration
+ *
+ * @throws {Error} If no configuration found
+ * @throws {Error} If configuration is invalid or malformed
+ *
+ * @example
+ * ```ts
+ * import { loadConfig } from "@theswanfactory/deno-hooks/config";
+ *
+ * const config = await loadConfig("/path/to/repo");
+ * console.log(config.hooks);
+ * ```
  */
 export async function loadConfig(rootDir: string): Promise<Config> {
   // Try deno-hooks.yml first
@@ -99,6 +117,19 @@ function validateConfig(config: Config): void {
 
 /**
  * Get hooks for a specific git hook trigger
+ *
+ * @param config - The loaded configuration
+ * @param hookName - The git hook trigger name (e.g., "pre-commit")
+ * @returns Array of hooks for this trigger (empty if none configured)
+ *
+ * @example
+ * ```ts
+ * import { getHooksForTrigger, loadConfig } from "@theswanfactory/deno-hooks/config";
+ *
+ * const config = await loadConfig(".");
+ * const hooks = getHooksForTrigger(config, "pre-commit");
+ * console.log(`Found ${hooks.length} pre-commit hooks`);
+ * ```
  */
 export function getHooksForTrigger(config: Config, hookName: string): Hook[] {
   return config.hooks[hookName] || [];

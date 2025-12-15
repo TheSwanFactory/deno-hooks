@@ -1,335 +1,162 @@
 # Deno Hooks - Developer Guide
 
-## Overview
+## For Contributors
 
-Deno Hooks is a zero-dependency git hooks framework built in pure TypeScript for
-Deno projects. It provides a declarative way to configure and run git hooks
-without requiring Python (pre-commit) or Node.js (Husky) dependencies.
+This guide is for developers working on deno-hooks itself. If you're a user
+wanting to use deno-hooks in your project, see [README.md](README.md).
 
-## Architecture
+## Development Setup
 
-### Components
+```bash
+# Clone the repository
+git clone https://github.com/TheSwanFactory/deno-hooks.git
+cd deno-hooks
+
+# Install git hooks for this repo
+deno task setup
+
+# Run tests
+deno test -A
+
+# Run integration tests
+deno task test-integration
+```
+
+## Architecture Overview
+
+Deno Hooks has a simple architecture:
+
+1. **Configuration** ([src/config.ts](src/config.ts)) - Loads from
+   `deno-hooks.yml` or `deno.json`
+2. **Installation** ([src/install.ts](src/install.ts)) - Generates shell scripts
+   in `.git/hooks/`
+3. **Execution** ([src/run.ts](src/run.ts)) - Runs when git triggers the hook
+4. **Built-in Hooks** ([src/executor.ts](src/executor.ts)) - Implements
+   deno-fmt, deno-lint, deno-test
+
+## How It Works
+
+When you run `deno task setup`:
+
+1. Reads configuration from `deno-hooks.yml` or `deno.json`
+2. Creates shell wrapper scripts in `.git/hooks/` (e.g., `pre-commit`)
+3. Each script calls `deno run -A src/run.ts <hook-name>`
+
+When git triggers a hook (e.g., on commit):
+
+1. Git executes `.git/hooks/pre-commit`
+2. The shell script calls `src/run.ts`
+3. `run.ts` loads config, filters files, and executes each hook
+4. If any hook fails (exit code ≠ 0), the git operation is blocked
+
+## Project Structure
 
 ```
 deno-hooks/
-├── mod.ts              # Main exports
-├── config.ts           # Configuration parsing (YAML/JSON)
-├── install.ts          # Git hooks installer
-├── run.ts              # Hook runner (called by git)
-├── executor.ts         # Hook execution logic
-├── files.ts            # File utilities (staged files, glob matching)
-├── hook.ts             # Type definitions
-└── test-hook.test.ts   # Tests
+├── src/
+│   ├── mod.ts          # Main exports
+│   ├── config.ts       # Configuration loading
+│   ├── install.ts      # Hook installation
+│   ├── run.ts          # Hook execution
+│   ├── executor.ts     # Built-in hook implementations
+│   ├── files.ts        # File utilities
+│   ├── hook.ts         # Type definitions
+│   └── test-hook.test.ts # Unit tests
+├── scripts/
+│   ├── doc-coverage.ts    # Documentation coverage checker
+│   └── test-fake-repo.ts  # Integration tests
+├── deno-hooks.yml      # This repo's hook config
+├── deno.json           # Package configuration
+└── README.md           # User documentation
 ```
 
-### How It Works
+## Testing
 
-1. **Installation** (`install.ts`)
-   - Reads configuration from `deno-hooks.yml` or `deno.json`
-   - Creates shell wrapper scripts in `.git/hooks/`
-   - Makes scripts executable
-
-2. **Git Hook Trigger**
-   - Git calls the shell wrapper (e.g., `.git/hooks/pre-commit`)
-   - Wrapper executes `deno run -A deno-hooks/run.ts pre-commit`
-
-3. **Hook Execution** (`run.ts`)
-   - Loads configuration
-   - Gets relevant files (staged for pre-commit)
-   - Filters files by glob patterns
-   - Executes each configured hook
-   - Reports results
-
-4. **Built-in Hooks** (`executor.ts`)
-   - `deno-fmt`: Format with `deno fmt`
-   - `deno-lint`: Lint with `deno lint`
-   - `deno-test`: Run `deno test -A`
-
-## Configuration
-
-### YAML Format (deno-hooks.yml)
-
-```yaml
-hooks:
-  pre-commit:
-    - id: deno-fmt
-      name: deno fmt
-      run: deno-fmt
-      glob: "*.{ts,js,json,md}"
-      pass_filenames: true
-
-    - id: deno-lint
-      name: deno lint
-      run: deno-lint
-      glob: "*.{ts,js}"
-      pass_filenames: true
-
-  pre-push:
-    - id: test
-      name: test
-      run: deno-test
-      pass_filenames: false
-```
-
-### JSON Format (deno.json)
-
-```json
-{
-  "deno-hooks": {
-    "hooks": {
-      "pre-commit": [
-        {
-          "id": "deno-fmt",
-          "run": "deno-fmt",
-          "glob": "*.{ts,js,json,md}",
-          "pass_filenames": true
-        }
-      ]
-    }
-  }
-}
-```
-
-### Hook Options
-
-- `id` (required): Unique identifier
-- `name` (optional): Display name (defaults to id)
-- `run` (required): Built-in hook name or shell command
-- `glob` (optional): File pattern to match (e.g., `*.ts`)
-- `pass_filenames` (optional): Pass matched files as arguments
-- `exclude` (optional): Exclude pattern
-- `parallel` (optional): Allow parallel execution (not yet implemented)
-
-## Built-in Hooks
-
-### deno-fmt
-
-Formats code with `deno fmt`. Runs in check mode first, then auto-formats if
-needed.
-
-```yaml
-- id: fmt
-  run: deno-fmt
-  glob: "*.{ts,js,json,md}"
-  pass_filenames: true
-```
-
-### deno-lint
-
-Lints code with `deno lint`. Reports errors without auto-fixing.
-
-```yaml
-- id: lint
-  run: deno-lint
-  glob: "*.{ts,js}"
-  pass_filenames: true
-```
-
-### deno-test
-
-Runs tests with `deno test -A`. Typically used in pre-push hooks.
-
-```yaml
-- id: test
-  run: deno-test
-  pass_filenames: false
-```
-
-## Custom Hooks
-
-You can run any command as a hook:
-
-```yaml
-hooks:
-  pre-commit:
-    - id: custom-check
-      run: "deno run -A scripts/my-check.ts"
-      glob: "*.ts"
-      pass_filenames: true
-```
-
-The command will be executed with matched files as arguments if
-`pass_filenames: true`.
-
-## File Filtering
-
-### Glob Patterns
-
-Supports glob patterns with brace expansion:
-
-- `*.ts` - All TypeScript files
-- `*.{ts,js}` - TypeScript and JavaScript files
-- `**/*.test.ts` - Test files (not yet supported, needs implementation)
-
-### Staged Files
-
-For `pre-commit` hooks, only staged files are processed. This is determined by:
+### Unit Tests
 
 ```bash
-git diff --cached --name-only --diff-filter=ACM
-```
-
-Files are then filtered by the glob pattern specified in each hook.
-
-## Development
-
-### Running Tests
-
-```bash
-cd deno-hooks
 deno test -A
 ```
 
-### Manual Testing
+Tests in [src/test-hook.test.ts](src/test-hook.test.ts):
+
+- Configuration parsing
+- File pattern matching
+- Staged file detection
+
+### Integration Tests
 
 ```bash
-# Install hooks
-deno run -A install.ts
-
-# Run hooks manually
-deno run -A run.ts pre-commit
-
-# Check installed hooks
-cat .git/hooks/pre-commit
+deno task test-integration
 ```
 
-### Adding a Built-in Hook
+The integration test ([scripts/test-fake-repo.ts](scripts/test-fake-repo.ts)):
 
-1. Add function to `executor.ts`:
-   ```typescript
-   async function myHook(ctx: HookContext): Promise<HookResult> {
-     // Implementation
-   }
-   ```
+- Creates a temporary git repository
+- Installs hooks from local source
+- Tests that hooks catch formatting/lint errors
+- Tests that hooks allow valid commits
+- Verifies hook script paths are correct
 
-2. Register in `getBuiltInHook()`:
-   ```typescript
-   const builtIns = {
-     "my-hook": myHook,
-     // ...
-   };
-   ```
+**This is critical** - it would have caught the bug in PR #1 where hooks
+referenced the wrong path!
 
-3. Use in configuration:
-   ```yaml
-   - id: my-check
-     run: my-hook
-   ```
+### Pre-Push Hooks
 
-## Current Limitations (MVP)
+This repo uses its own hooks:
 
-1. **Sequential Execution**: Hooks run one at a time (parallel execution planned
-   for Phase 2)
-2. **Limited Built-ins**: Only fmt, lint, test (more planned)
-3. **Simple Glob Matching**: No `**` or complex patterns yet
-4. **No Hook Dependencies**: Can't specify hook execution order
-5. **Auto-fix Staging**: Formatted files not automatically re-staged
+- **pre-commit**: Runs `deno fmt` and `deno lint`
+- **pre-push**: Runs unit tests AND integration tests
 
-## Future Enhancements
+## Adding Built-in Hooks
 
-### Phase 2 (Planned)
+Built-in hooks are defined in [src/executor.ts](src/executor.ts). To add a new
+one:
 
-- Parallel hook execution
-- More built-in hooks (check-yaml, trailing-whitespace, etc.)
-- Better glob pattern support (`**/*.ts`)
-- Hook dependencies and ordering
-- Auto-restaging for auto-fix hooks
-- Skip hooks via environment variable
+1. Add the hook to the `BUILTIN_HOOKS` object
+2. Implement the execution logic
+3. Add tests
+4. Update documentation
 
-### Phase 3 (Future)
+Example:
 
-- Publish to JSR as `@data-yaml/deno-hooks`
-- Extract to separate repository
-- CI/CD integration guides
-- Migration tool from pre-commit
-- Community hook sharing
-
-## Migration from pre-commit
-
-### Before (pre-commit)
-
-```yaml
-# .pre-commit-config.yaml
-repos:
-  - repo: local
-    hooks:
-      - id: lint
-        name: lint
-        entry: bash -c "deno fmt && deno lint --fix"
-        language: system
-        pass_filenames: false
+```typescript
+export const BUILTIN_HOOKS = {
+  "deno-fmt": async (files: string[]) => {
+    const cmd = ["deno", "fmt", "--check", ...files];
+    // ... execution logic
+  },
+  "your-hook": async (files: string[]) => {
+    // Your implementation
+  },
+};
 ```
 
-### After (deno-hooks)
+## Publishing
 
-```yaml
-# deno-hooks.yml
-hooks:
-  pre-commit:
-    - id: deno-fmt
-      run: deno-fmt
-      glob: "*.{ts,js,json,md}"
-      pass_filenames: true
-    - id: deno-lint
-      run: deno-lint
-      glob: "*.{ts,js}"
-      pass_filenames: true
-```
+Publishing to JSR is automated via GitHub Actions:
 
-### Benefits
+1. Update version in `deno.json`
+2. Update `CHANGELOG.md`
+3. Commit: `git commit -m "Bump version to X.Y.Z"`
+4. Tag: `git tag vX.Y.Z`
+5. Push: `git push && git push --tags`
+6. GitHub Actions publishes to JSR automatically
 
-- No Python dependency
-- Faster startup (~100ms vs ~500ms)
-- Native Deno integration
-- Type-safe configuration
-- Simpler installation
+See [.github/workflows/publish.yml](.github/workflows/publish.yml).
 
-## Troubleshooting
+## Contributing
 
-### Hooks Not Running
-
-Check that hooks are installed:
-
-```bash
-ls -la .git/hooks/pre-commit
-cat .git/hooks/pre-commit
-```
-
-Reinstall if needed:
-
-```bash
-deno task setup
-```
-
-### Configuration Errors
-
-Validate configuration:
-
-```bash
-deno run -A deno-hooks/run.ts pre-commit
-```
-
-Check YAML syntax:
-
-```bash
-deno eval "import { parse } from '@std/yaml'; console.log(parse(await Deno.readTextFile('deno-hooks.yml')))"
-```
-
-### Hooks Passing When They Shouldn't
-
-Check that files match glob patterns:
-
-```bash
-# Get staged files
-git diff --cached --name-only
-
-# Test pattern matching
-deno eval "import { filterFiles } from './deno-hooks/files.ts'; console.log(filterFiles(['foo.ts', 'bar.js'], '*.ts'))"
-```
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run `deno fmt` and `deno lint`
+5. Run `deno test -A` and `deno task test-integration`
+6. Submit a PR
 
 ## Resources
 
-- **Spec**:
-  [doc/spec/2-deno-hooks/README.md](../doc/spec/2-deno-hooks/README.md)
 - **Git Hooks**: [git-scm.com/docs/githooks](https://git-scm.com/docs/githooks)
+- **JSR**: [jsr.io](https://jsr.io)
+- **Deno**: [deno.land](https://deno.land)
 - **Pre-commit** (inspiration): [pre-commit.com](https://pre-commit.com/)

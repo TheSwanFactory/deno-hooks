@@ -37,3 +37,25 @@ jobs:
           else
             deno publish
           fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref }}
+          name: Release ${{ steps.get_version.outputs.version }}
+          body: |
+            ## Release ${{ steps.get_version.outputs.version }}
+
+            Published to JSR: [@theswanfactory/deno-hooks@${{ steps.get_version.outputs.version }}](https://jsr.io/@theswanfactory/deno-hooks@${{ steps.get_version.outputs.version }})
+
+            ### Installation
+
+            ```bash
+            deno add @theswanfactory/deno-hooks@${{ steps.get_version.outputs.version }}
+            ```
+
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/CHANGELOG.md) for details.
+          draft: false
+          prerelease: ${{ contains(steps.get_version.outputs.version, '-dev.') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -13,7 +13,8 @@
     "test-integration": "deno run -A scripts/test-fake-repo.ts",
     "coverage": "deno test -A --coverage=.coverage && deno coverage .coverage",
     "doc": "deno doc src/mod.ts",
-    "doc-coverage": "deno run -A scripts/doc-coverage.ts"
+    "doc-coverage": "deno run -A scripts/doc-coverage.ts",
+    "version": "deno run -A scripts/version.ts"
   },
   "fmt": {
     "exclude": []

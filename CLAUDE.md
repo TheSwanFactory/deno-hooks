@@ -51,7 +51,7 @@ When git triggers a hook (e.g., on commit):
 
 ## Project Structure
 
-```
+```text
 deno-hooks/
 ├── src/
 │   ├── mod.ts          # Main exports
@@ -64,7 +64,8 @@ deno-hooks/
 │   └── test-hook.test.ts # Unit tests
 ├── scripts/
 │   ├── doc-coverage.ts    # Documentation coverage checker
-│   └── test-fake-repo.ts  # Integration tests
+│   ├── test-fake-repo.ts  # Integration tests
+│   └── version.ts         # Version management (display, bump, tag)
 ├── deno-hooks.yml      # This repo's hook config
 ├── deno.json           # Package configuration
 └── README.md           # User documentation
@@ -134,14 +135,53 @@ export const BUILTIN_HOOKS = {
 
 ## Publishing
 
-Publishing to JSR is automated via GitHub Actions:
+Publishing to JSR is automated via GitHub Actions. Use the `deno task version`
+command to manage versions and releases.
 
-1. Update version in `deno.json`
-2. Update `CHANGELOG.md`
-3. Commit: `git commit -m "Bump version to X.Y.Z"`
-4. Tag: `git tag vX.Y.Z`
-5. Push: `git push && git push --tags`
-6. GitHub Actions publishes to JSR automatically
+### Version Management Commands
+
+```bash
+# Display current version
+deno task version
+
+# Bump version (automatically updates deno.json)
+deno task version patch  # 0.2.0 -> 0.2.1
+deno task version minor  # 0.2.0 -> 0.3.0
+deno task version major  # 0.2.0 -> 1.0.0
+
+# Create and push release tag
+deno task version tag
+
+# Show help
+deno task version help
+```
+
+### Release Workflow
+
+#### Option 1: Automated version bump
+
+1. Update version: `deno task version patch` (or `minor`/`major`)
+2. Update `CHANGELOG.md` (move changes from `[Unreleased]` to new version)
+3. Commit: `git commit -am "Bump version to $(deno task version)"`
+4. Push: `git push`
+5. Create tag: `deno task version tag`
+
+#### Option 2: Manual version in deno.json
+
+1. Edit `deno.json` to change version manually
+2. Update `CHANGELOG.md` (move changes from `[Unreleased]` to new version)
+3. Commit: `git commit -am "Bump version to X.Y.Z"`
+4. Push: `git push`
+5. Create tag: `deno task version tag`
+
+The `deno task version tag` command will:
+
+- Read the version from `deno.json`
+- Verify the working directory is clean
+- Check that the tag doesn't already exist
+- Create an annotated git tag (e.g., `v0.2.1`)
+- Push the tag to GitHub
+- Trigger GitHub Actions to publish to JSR automatically
 
 See [.github/workflows/publish.yml](.github/workflows/publish.yml).
 

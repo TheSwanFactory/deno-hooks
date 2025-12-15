@@ -5,6 +5,20 @@
 > **Policy**: Concise entries for user-visible changes since last tag. One-line
 > per change. Ignore internal cleanup, specs, and test-only changes.
 
+## [Unreleased]
+
+### Added
+
+- Version management script with `deno task version` command for displaying,
+  bumping (patch/minor/major), and tagging releases
+
+### Fixed
+
+- Critical bug: JSR installations now generate valid hook paths with `jsr:`
+  protocol instead of invalid filesystem paths (fixes #9)
+- Integration tests now properly validate hook path formats to catch path
+  generation bugs
+
 ## [0.2.0] - 2024-12-14
 
 ### Changed

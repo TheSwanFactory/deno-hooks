@@ -204,23 +204,41 @@ async function testHookPathIsCorrect() {
   const hookPath = join(TEMP_DIR, ".git/hooks/pre-commit");
   const hookContent = await Deno.readTextFile(hookPath);
 
-  // Check that it references the deno-hooks package, not the test repo
-  const hasCorrectPath = hookContent.includes("src/run.ts") &&
-    !hookContent.includes(`"${TEMP_DIR}/src/run.ts"`);
+  // Extract the actual path from the hook script
+  const pathMatch = hookContent.match(/exec deno run -A "(.+)" "pre-commit"/);
+  const extractedPath = pathMatch?.[1];
 
-  if (hasCorrectPath) {
+  if (!extractedPath) {
+    results.push({
+      name: "Hook script references correct path",
+      passed: false,
+      error: "Could not extract path from hook script",
+    });
+    console.log("  ❌ FAIL: Could not extract path from hook script\n");
+    return;
+  }
+
+  // Validate it's one of the valid formats:
+  // 1. JSR specifier: jsr:@scope/package@version/path
+  // 2. Local file path: /absolute/path/to/file (should not be in temp dir)
+  const isValidJSR = extractedPath.startsWith("jsr:@");
+  const isValidLocalPath = extractedPath.startsWith("/") &&
+    extractedPath.includes("/src/run.ts") &&
+    !extractedPath.includes(TEMP_DIR);
+
+  if (isValidJSR || isValidLocalPath) {
     results.push({
       name: "Hook script references correct path",
       passed: true,
     });
-    console.log("  ✅ PASS: Hook references package path\n");
+    console.log(`  ✅ PASS: Hook references valid path: ${extractedPath}\n`);
   } else {
     results.push({
       name: "Hook script references correct path",
       passed: false,
-      error: `Hook references wrong path: ${hookContent}`,
+      error: `Invalid path format: ${extractedPath}`,
     });
-    console.log("  ❌ FAIL: Hook references wrong path\n");
+    console.log(`  ❌ FAIL: Invalid path format: ${extractedPath}\n`);
   }
 }
 

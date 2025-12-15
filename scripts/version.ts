@@ -109,6 +109,13 @@ async function checkTagExists(tag: string): Promise<boolean> {
 async function displayVersion(): Promise<void> {
   const version = await getCurrentVersion();
   console.log(version);
+
+  // Check if it's a dev version
+  const isDevVersion = version.match(/^(.+)-dev\.(\d+)$/);
+  if (isDevVersion) {
+    console.log("\n⚠️  Current version is a dev pre-release.");
+    console.log("To reset to stable version, run: deno task version reset");
+  }
 }
 
 async function bump(type: BumpType): Promise<void> {
@@ -159,6 +166,68 @@ function getNextDevVersion(currentVersion: string): string {
     // Start new dev sequence from stable version
     return `${currentVersion}-dev.1`;
   }
+}
+
+async function resetFromDev(): Promise<void> {
+  const currentVersion = await getCurrentVersion();
+  const devMatch = currentVersion.match(/^(.+)-dev\.(\d+)$/);
+
+  if (!devMatch) {
+    console.log("✅ Current version is already stable:", currentVersion);
+    return;
+  }
+
+  const stableVersion = devMatch[1];
+  console.log("🔄 Resetting from Dev to Stable Version\n");
+  console.log(`📦 Current Version: ${currentVersion}`);
+  console.log(`📦 Stable Version:  ${stableVersion}`);
+
+  // Check if working directory is clean
+  console.log("\n🔍 Checking git status...");
+  const isClean = await checkGitStatus();
+
+  if (!isClean) {
+    console.error(
+      "\n❌ Working directory is not clean. Please commit or stash your changes first.",
+    );
+    console.error("Run: git status");
+    Deno.exit(1);
+  }
+  console.log("✅ Working directory is clean");
+
+  // Update version in deno.json
+  console.log(`\n📝 Updating deno.json to version ${stableVersion}...`);
+  await updateVersion(stableVersion);
+  console.log("✅ Updated deno.json");
+
+  // Commit the version change
+  console.log(`\n💾 Committing version change...`);
+  const commitResult = await runCommand([
+    "git",
+    "commit",
+    "-am",
+    `Reset version to ${stableVersion} after dev testing`,
+  ]);
+
+  if (!commitResult.success) {
+    console.error(`\n❌ Failed to commit version change`);
+    Deno.exit(1);
+  }
+  console.log("✅ Committed version change");
+
+  // Push commit
+  console.log(`\n📤 Pushing commit to remote...`);
+  const pushResult = await runCommand(["git", "push"]);
+
+  if (!pushResult.success) {
+    console.error(`\n❌ Failed to push commit`);
+    Deno.exit(1);
+  }
+  console.log(`✅ Pushed commit to remote`);
+
+  console.log("\n✅ Version reset to stable successfully!");
+  console.log("\nNext steps:");
+  console.log("1. Create release tag: deno task version tag");
 }
 
 async function tagDev(): Promise<void> {
@@ -260,6 +329,16 @@ async function tag(): Promise<void> {
   const version = await getCurrentVersion();
   const tagName = `v${version}`;
 
+  // Check if it's a dev version
+  const devMatch = version.match(/^(.+)-dev\.(\d+)$/);
+  if (devMatch) {
+    console.error("❌ Cannot create stable release tag for dev version:", version);
+    console.error("\nYou must reset to a stable version first.");
+    console.error("Run: deno task version reset");
+    console.error(`\nThis will reset from ${version} to ${devMatch[1]}`);
+    Deno.exit(1);
+  }
+
   console.log("🏷️  Creating Git Tag for Release\n");
   console.log(`📦 Version: ${version}`);
 
@@ -335,6 +414,7 @@ Usage:
   deno task version patch        Bump patch version (0.2.0 -> 0.2.1)
   deno task version minor        Bump minor version (0.2.0 -> 0.3.0)
   deno task version major        Bump major version (0.2.0 -> 1.0.0)
+  deno task version reset        Reset from dev version to stable (0.2.1-dev.1 -> 0.2.1)
   deno task version tag          Create and push git tag for current version
   deno task version dev          Create and push dev pre-release tag
   deno task version help         Show this help message
@@ -347,11 +427,14 @@ Examples:
   deno task version patch
   git commit -am "Bump version to $(deno task version)"
 
-  # Create release tag
-  deno task version tag
-
-  # Create dev pre-release (use 'deno task tag:dev' to run tests first)
+  # Create dev pre-release for testing (use 'deno task tag-dev' to run tests first)
   deno task version dev
+
+  # Reset to stable version after dev testing
+  deno task version reset
+
+  # Create stable release tag
+  deno task version tag
 `);
 }
 
@@ -368,6 +451,9 @@ try {
     case "minor":
     case "major":
       await bump(command);
+      break;
+    case "reset":
+      await resetFromDev();
       break;
     case "tag":
       await tag();

@@ -31,6 +31,7 @@
 
 ### Added
 
+- Now properly creates releases
 - Self-contained hook scripts that work without deno-hooks installed
 - Support for any shell command in hooks (not just deno commands)
 - Success message "✓ All hooks passed" after successful hook execution

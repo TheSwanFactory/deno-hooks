@@ -17,6 +17,7 @@
  */
 
 import { join } from "@std/path";
+import { format, increment, parse } from "@std/semver";
 
 interface DenoConfig {
   version: string;
@@ -58,40 +59,42 @@ async function getCurrentVersion(): Promise<string> {
   return config.version;
 }
 
-function parseVersion(
-  version: string,
-): { major: number; minor: number; patch: number } {
-  const match = version.match(/^(\d+)\.(\d+)\.(\d+)$/);
-  if (!match) {
-    throw new Error(`Invalid version format: ${version}`);
-  }
-  return {
-    major: parseInt(match[1]),
-    minor: parseInt(match[2]),
-    patch: parseInt(match[3]),
-  };
+function isDev(version: string): boolean {
+  return /^.+-dev\.\d+$/.test(version);
 }
 
-function bumpVersion(version: string, type: BumpType): string {
-  const { major, minor, patch } = parseVersion(version);
+function getStableBase(version: string): string {
+  const devMatch = version.match(/^(.+)-dev\.(\d+)$/);
+  return devMatch ? devMatch[1] : version;
+}
 
-  switch (type) {
-    case "major":
-      return `${major + 1}.0.0`;
-    case "minor":
-      return `${major}.${minor + 1}.0`;
-    case "patch":
-      return `${major}.${minor}.${patch + 1}`;
+function parseSemVerOrThrow(version: string) {
+  try {
+    return parse(version);
+  } catch {
+    throw new Error(`Invalid semver in deno.json: ${version}`);
   }
 }
 
-async function updateVersion(newVersion: string): Promise<void> {
-  const { config, path } = await getConfig();
-  config.version = newVersion;
+function bumpStableVersion(version: string, type: BumpType): string {
+  // We intentionally disallow bumping while on a prerelease/dev version to avoid surprises.
+  if (version.includes("-")) {
+    throw new Error(
+      `Cannot bump a prerelease/dev version (${version}). Reset to a stable version first (deno task version reset).`,
+    );
+  }
 
-  // Write back with pretty formatting
-  const configText = JSON.stringify(config, null, 2) + "\n";
-  await Deno.writeTextFile(path, configText);
+  const sem = parseSemVerOrThrow(version);
+  const bumped = increment(sem, type);
+  return format(bumped);
+}
+
+function getTimestampDevVersion(currentVersion: string): string {
+  // Always generate a monotonic, merge-safe dev identifier.
+  // Use seconds to keep it short and avoid leading zeros.
+  const base = getStableBase(currentVersion);
+  const epochSeconds = Math.floor(Date.now() / 1000);
+  return `${base}-dev.${epochSeconds}`;
 }
 
 async function checkGitStatus(): Promise<boolean> {
@@ -110,9 +113,7 @@ async function displayVersion(): Promise<void> {
   const version = await getCurrentVersion();
   console.log(version);
 
-  // Check if it's a dev version
-  const isDevVersion = version.match(/^(.+)-dev\.(\d+)$/);
-  if (isDevVersion) {
+  if (isDev(version)) {
     console.log("\n⚠️  Current version is a dev pre-release.");
     console.log("To reset to stable version, run: deno task version reset");
   }
@@ -120,7 +121,7 @@ async function displayVersion(): Promise<void> {
 
 async function bump(type: BumpType): Promise<void> {
   const currentVersion = await getCurrentVersion();
-  const newVersion = bumpVersion(currentVersion, type);
+  const newVersion = bumpStableVersion(currentVersion, type);
 
   console.log(`📦 Version Bump (${type})\n`);
   console.log(`Current version: ${currentVersion}`);
@@ -153,31 +154,24 @@ async function bump(type: BumpType): Promise<void> {
   console.log("5. Tag: deno task version tag");
 }
 
-function getNextDevVersion(currentVersion: string): string {
-  // Check if already a dev version (e.g., "0.2.1-dev.2")
-  const devMatch = currentVersion.match(/^(.+)-dev\.(\d+)$/);
+async function updateVersion(newVersion: string): Promise<void> {
+  const { config, path } = await getConfig();
+  config.version = newVersion;
 
-  if (devMatch) {
-    // Increment existing dev number
-    const baseVersion = devMatch[1];
-    const devNumber = parseInt(devMatch[2]);
-    return `${baseVersion}-dev.${devNumber + 1}`;
-  } else {
-    // Start new dev sequence from stable version
-    return `${currentVersion}-dev.1`;
-  }
+  // Write back with pretty formatting
+  const configText = JSON.stringify(config, null, 2) + "\n";
+  await Deno.writeTextFile(path, configText);
 }
 
 async function resetFromDev(): Promise<void> {
   const currentVersion = await getCurrentVersion();
-  const devMatch = currentVersion.match(/^(.+)-dev\.(\d+)$/);
 
-  if (!devMatch) {
+  if (!isDev(currentVersion)) {
     console.log("✅ Current version is already stable:", currentVersion);
     return;
   }
 
-  const stableVersion = devMatch[1];
+  const stableVersion = getStableBase(currentVersion);
   console.log("🔄 Resetting from Dev to Stable Version\n");
   console.log(`📦 Current Version: ${currentVersion}`);
   console.log(`📦 Stable Version:  ${stableVersion}`);
@@ -233,8 +227,19 @@ async function resetFromDev(): Promise<void> {
 
 async function tagDev(): Promise<void> {
   const currentVersion = await getCurrentVersion();
-  const devVersion = getNextDevVersion(currentVersion);
+  const devVersion = getTimestampDevVersion(currentVersion);
   const tagName = `v${devVersion}`;
+
+  // Check if tag already exists (very unlikely with timestamp-based dev versions, but still safe)
+  console.log(`\n🔍 Checking if tag ${tagName} exists...`);
+  const tagExists = await checkTagExists(tagName);
+  if (tagExists) {
+    console.error(
+      `\n❌ Tag ${tagName} already exists. Re-run to generate a new timestamped dev version.`,
+    );
+    Deno.exit(1);
+  }
+  console.log(`✅ Tag ${tagName} does not exist yet`);
 
   console.log("🏷️  Creating Dev Pre-release Tag\n");
   console.log(`📦 Current Version: ${currentVersion}`);
@@ -322,20 +327,20 @@ async function tagDev(): Promise<void> {
 
 async function tag(): Promise<void> {
   const version = await getCurrentVersion();
-  const tagName = `v${version}`;
 
-  // Check if it's a dev version
-  const devMatch = version.match(/^(.+)-dev\.(\d+)$/);
-  if (devMatch) {
+  if (isDev(version)) {
+    const stableBase = getStableBase(version);
     console.error(
       "❌ Cannot create stable release tag for dev version:",
       version,
     );
     console.error("\nYou must reset to a stable version first.");
     console.error("Run: deno task version reset");
-    console.error(`\nThis will reset from ${version} to ${devMatch[1]}`);
+    console.error(`\nThis will reset from ${version} to ${stableBase}`);
     Deno.exit(1);
   }
+
+  const tagName = `v${version}`;
 
   console.log("🏷️  Creating Git Tag for Release\n");
   console.log(`📦 Version: ${version}`);
@@ -412,7 +417,7 @@ Usage:
   deno task version patch        Bump patch version (0.2.0 -> 0.2.1)
   deno task version minor        Bump minor version (0.2.0 -> 0.3.0)
   deno task version major        Bump major version (0.2.0 -> 1.0.0)
-  deno task version reset        Reset from dev version to stable (0.2.1-dev.1 -> 0.2.1)
+  deno task version reset        Reset from dev version to stable (0.2.1-dev.<epoch> -> 0.2.1)
   deno task version tag          Create and push git tag for current version
   deno task version dev          Create and push dev pre-release tag
   deno task version help         Show this help message
@@ -425,7 +430,7 @@ Examples:
   deno task version patch
   git commit -am "Bump version to $(deno task version)"
 
-  # Create dev pre-release for testing (use 'deno task tag-dev' to run tests first)
+  # Create dev pre-release for testing (timestamp-based, merge-safe)
   deno task version dev
 
   # Reset to stable version after dev testing

@@ -1,6 +1,6 @@
 {
   "name": "@theswanfactory/deno-hooks",
-  "version": "0.3.0-dev.1765826058",
+  "version": "0.3.0",
   "exports": {
     ".": "./src/mod.ts"
   },

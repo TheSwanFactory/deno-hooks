@@ -200,12 +200,13 @@ async function resetFromDev(): Promise<void> {
   await updateVersion(stableVersion);
   console.log("✅ Updated deno.json");
 
-  // Commit the version change
+  // Stage and commit only deno.json
   console.log(`\n💾 Committing version change...`);
+  await runCommand(["git", "add", "deno.json"]);
   const commitResult = await runCommand([
     "git",
     "commit",
-    "-am",
+    "-m",
     `Reset version to ${stableVersion} after dev testing`,
   ]);
 
@@ -257,12 +258,13 @@ async function tagDev(): Promise<void> {
   await updateVersion(devVersion);
   console.log("✅ Updated deno.json");
 
-  // Commit the version change
+  // Stage and commit only deno.json
   console.log(`\n💾 Committing version change...`);
+  await runCommand(["git", "add", "deno.json"]);
   const commitResult = await runCommand([
     "git",
     "commit",
-    "-am",
+    "-m",
     `Bump version to ${devVersion} for JSR dev release`,
   ]);
 

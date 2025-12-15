@@ -153,19 +153,40 @@ async function bump(type: BumpType): Promise<void> {
   console.log("5. Tag: deno task version tag");
 }
 
-function getNextDevVersion(currentVersion: string): string {
-  // Check if already a dev version (e.g., "0.2.1-dev.2")
+async function getNextDevVersion(currentVersion: string): Promise<string> {
+  // Extract base version (strip -dev.N if present)
   const devMatch = currentVersion.match(/^(.+)-dev\.(\d+)$/);
+  const baseVersion = devMatch ? devMatch[1] : currentVersion;
 
-  if (devMatch) {
-    // Increment existing dev number
-    const baseVersion = devMatch[1];
-    const devNumber = parseInt(devMatch[2]);
-    return `${baseVersion}-dev.${devNumber + 1}`;
-  } else {
-    // Start new dev sequence from stable version
-    return `${currentVersion}-dev.1`;
+  // Find all existing dev tags for this base version
+  const result = await runCommand(
+    ["git", "tag", "-l", `v${baseVersion}-dev.*`],
+    { silent: true },
+  );
+
+  if (!result.success) {
+    // If git command fails, fall back to deno.json version
+    if (devMatch) {
+      const devNumber = parseInt(devMatch[2]);
+      return `${baseVersion}-dev.${devNumber + 1}`;
+    }
+    return `${baseVersion}-dev.1`;
   }
+
+  // Parse all dev numbers from existing tags
+  const tags = result.output.trim().split("\n").filter((t) => t);
+  const devNumbers = tags
+    .map((tag) => {
+      const match = tag.match(/^v.+-dev\.(\d+)$/);
+      return match ? parseInt(match[1]) : 0;
+    })
+    .filter((n) => n > 0);
+
+  // Get the highest dev number and increment
+  const maxDevNumber = devNumbers.length > 0 ? Math.max(...devNumbers) : 0;
+  const nextDevNumber = maxDevNumber + 1;
+
+  return `${baseVersion}-dev.${nextDevNumber}`;
 }
 
 async function resetFromDev(): Promise<void> {
@@ -232,7 +253,7 @@ async function resetFromDev(): Promise<void> {
 
 async function tagDev(): Promise<void> {
   const currentVersion = await getCurrentVersion();
-  const devVersion = getNextDevVersion(currentVersion);
+  const devVersion = await getNextDevVersion(currentVersion);
   const tagName = `v${devVersion}`;
 
   console.log("🏷️  Creating Dev Pre-release Tag\n");
@@ -251,19 +272,6 @@ async function tagDev(): Promise<void> {
     Deno.exit(1);
   }
   console.log("✅ Working directory is clean");
-
-  // Check if tag already exists
-  console.log(`\n🔍 Checking if tag ${tagName} exists...`);
-  const tagExists = await checkTagExists(tagName);
-
-  if (tagExists) {
-    console.error(`\n❌ Tag ${tagName} already exists.`);
-    console.error(
-      `If you want to update the tag, delete it first with: git tag -d ${tagName} && git push origin :refs/tags/${tagName}`,
-    );
-    Deno.exit(1);
-  }
-  console.log(`✅ Tag ${tagName} does not exist yet`);
 
   // Update version in deno.json
   console.log(`\n📝 Updating deno.json to version ${devVersion}...`);

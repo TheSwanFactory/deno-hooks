@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: read
+      contents: write # Required for creating releases
       id-token: write # Required for OIDC authentication with JSR
 
     steps:

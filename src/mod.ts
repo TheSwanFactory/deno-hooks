@@ -46,3 +46,18 @@ export { install } from "./install.ts";
 export { run } from "./run.ts";
 export type { Config, Hook } from "./config.ts";
 export type { HookContext, HookResult } from "./hook.ts";
+
+// When run directly (e.g., deno run -A jsr:@theswanfactory/deno-hooks)
+// automatically run the installer
+if (import.meta.main) {
+  const { install } = await import("./install.ts");
+  try {
+    await install();
+  } catch (error) {
+    console.error(
+      "\n❌ Installation failed:",
+      error instanceof Error ? error.message : String(error),
+    );
+    Deno.exit(1);
+  }
+}

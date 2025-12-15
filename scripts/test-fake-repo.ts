@@ -80,6 +80,7 @@ async function setup() {
   await Deno.writeTextFile(join(TEMP_DIR, "deno-hooks.yml"), config);
 
   // Install hooks from local source
+  // Note: Integration test provides config file, so no prompt appears
   const installResult = await run([
     "deno",
     "run",

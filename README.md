@@ -7,48 +7,23 @@ test your code before commits and pushes.
 
 - 🦕 **Pure Deno** - No Python (pre-commit) or Node.js (Husky) required
 - ⚡ **Fast** - Runs in milliseconds with parallel execution
-- 🎯 **Simple** - One YAML file, no complex setup
+- 🎯 **Simple** - One command to get started
 - 🔒 **Secure** - Uses Deno's permission model
 
 ## Quick Start
 
-### 1. Add to Your Project
-
-Create `deno-hooks.yml`:
-
-```yaml
-hooks:
-  pre-commit:
-    - id: deno-fmt
-      glob: "*.{ts,js,json,md}"
-      pass_filenames: true
-
-    - id: deno-lint
-      glob: "*.{ts,js}"
-      pass_filenames: true
-```
-
-### 2. Install Hooks
-
-Add to your `deno.json`:
-
-```json
-{
-  "tasks": {
-    "setup": "deno run -A jsr:@theswanfactory/deno-hooks/install"
-  }
-}
-```
-
-Then run:
+Run this command in your Deno project:
 
 ```bash
-deno task setup
+deno run -A jsr:@theswanfactory/deno-hooks
 ```
 
-### 3. That's It!
+That's it! If you don't have a configuration file, it will offer to create one
+for you with sensible defaults (format, lint, test).
 
-Hooks run automatically:
+### What You Get
+
+Hooks run automatically on every commit:
 
 ```bash
 git commit -m "fix: typo"
@@ -56,6 +31,18 @@ git commit -m "fix: typo"
 #   ✓ deno fmt (2 files formatted)
 #   ✓ deno lint
 # All hooks passed! ✨
+```
+
+### Make It Easier
+
+Add to your `deno.json` so you can run `deno task setup`:
+
+```json
+{
+  "tasks": {
+    "setup": "deno run -A jsr:@theswanfactory/deno-hooks"
+  }
+}
 ```
 
 ## Common Configurations
@@ -180,7 +167,7 @@ deno task setup
 
 ```bash
 # Hooks need -A flag for full permissions
-deno run -A jsr:@theswanfactory/deno-hooks/install
+deno run -A jsr:@theswanfactory/deno-hooks
 ```
 
 **Want to skip hooks temporarily?**

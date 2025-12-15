@@ -51,25 +51,53 @@ export async function install(): Promise<void> {
   const gitRoot = await getGitRoot();
   console.log(`📁 Git root: ${gitRoot}`);
 
-  // Load and validate configuration
-  const config = await loadConfig(gitRoot);
+  // Check if config exists, offer to create default
+  let config;
+  try {
+    config = await loadConfig(gitRoot);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("not found")) {
+      const shouldCreate = promptCreateDefaultConfig();
+      if (shouldCreate) {
+        await createDefaultConfig(gitRoot);
+        config = await loadConfig(gitRoot);
+        console.log("\n✅ Created deno-hooks.yml with default configuration");
+      } else {
+        throw new Error(
+          "No configuration found. Create deno-hooks.yml or add configuration to deno.json",
+        );
+      }
+    } else {
+      throw error;
+    }
+  }
+
   const hookNames = Object.keys(config.hooks);
-  console.log(`📋 Found ${hookNames.length} hook(s): ${hookNames.join(", ")}`);
+
+  // Show what hooks will be installed
+  console.log(`\n📋 Installing ${hookNames.length} hook(s):\n`);
+  for (const hookName of hookNames) {
+    const hooks = config.hooks[hookName];
+    console.log(`${hookName}:`);
+    for (const hook of hooks) {
+      const displayName = hook.name || hook.id;
+      console.log(`  - ${displayName}`);
+    }
+  }
 
   // Ensure .git/hooks/ exists
   const hooksDir = `${gitRoot}/.git/hooks`;
   await ensureDir(hooksDir);
 
   // Install each hook
+  console.log();
   for (const hookName of hookNames) {
     await installHook(hooksDir, hookName);
   }
 
   console.log("\n✅ Installation complete!");
-  console.log("\nGit hooks are now active. They will run automatically on:");
-  for (const hookName of hookNames) {
-    console.log(`  - ${hookName}`);
-  }
+  console.log("\nHooks will run automatically on commit/push.");
+  console.log("To customize, edit deno-hooks.yml in your project root.");
 }
 
 /**
@@ -108,6 +136,54 @@ function generateHookScript(hookName: string): string {
 
 exec deno run -A "${runScriptPath}" "${hookName}" "$@"
 `;
+}
+
+/**
+ * Prompt user to create default configuration
+ */
+function promptCreateDefaultConfig(): boolean {
+  console.log("\n⚠️  No configuration file found");
+  console.log(
+    "\nWould you like to create a default deno-hooks.yml with basic hooks?",
+  );
+  console.log("  - pre-commit: deno fmt, deno lint");
+  console.log("  - pre-push: deno test");
+
+  const response = prompt("\nCreate default configuration? [Y/n]");
+  return !response || response.toLowerCase() === "y" ||
+    response.toLowerCase() === "yes";
+}
+
+/**
+ * Create default configuration file
+ */
+async function createDefaultConfig(gitRoot: string): Promise<void> {
+  const defaultConfig = `# Deno Hooks Configuration
+# Learn more: https://jsr.io/@theswanfactory/deno-hooks
+
+hooks:
+  pre-commit:
+    # Format code automatically
+    - id: deno-fmt
+      run: deno-fmt
+      glob: "*.{ts,js,json,md}"
+      pass_filenames: true
+
+    # Catch common errors
+    - id: deno-lint
+      run: deno-lint
+      glob: "*.{ts,js}"
+      pass_filenames: true
+
+  pre-push:
+    # Run tests before pushing
+    - id: deno-test
+      run: deno-test
+      pass_filenames: false
+`;
+
+  const configPath = `${gitRoot}/deno-hooks.yml`;
+  await Deno.writeTextFile(configPath, defaultConfig);
 }
 
 // Run if called directly

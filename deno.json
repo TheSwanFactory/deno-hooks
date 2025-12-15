@@ -8,13 +8,15 @@
   },
   "tasks": {
     "setup": "deno run -A src/install.ts",
-    "install": "deno run -A src/install.ts",
     "test": "deno test -A",
     "test-integration": "deno run -A scripts/test-fake-repo.ts",
+    "test-all": "deno test -A && deno task test-integration",
     "coverage": "deno test -A --coverage=.coverage && deno coverage .coverage",
     "doc": "deno doc src/mod.ts",
     "doc-coverage": "deno run -A scripts/doc-coverage.ts",
-    "version": "deno run -A scripts/version.ts"
+    "version": "deno run -A scripts/version.ts",
+    "tag": "deno task test-all && deno run -A scripts/version.ts tag",
+    "tag-dev": "deno task test-all && deno run -A scripts/version.ts dev"
   },
   "fmt": {
     "exclude": []

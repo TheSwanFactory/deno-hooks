@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - "v*.*.*" # Triggers on version tags like v0.1.0, v1.2.3, etc.
+      - "v*.*.*-dev.*" # Triggers on dev pre-release tags like v0.2.1-dev.1734197345
 
 jobs:
   publish:

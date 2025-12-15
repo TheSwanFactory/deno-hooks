@@ -5,7 +5,7 @@
  * This script provides comprehensive version management:
  * - Display current version
  * - Bump version (patch/minor/major)
- * - Create and push git tags
+ * - Create and push git tags (stable and dev pre-releases)
  *
  * Usage:
  *   deno task version              # Display current version
@@ -13,6 +13,7 @@
  *   deno task version minor        # Bump minor version (0.2.0 -> 0.3.0)
  *   deno task version major        # Bump major version (0.2.0 -> 1.0.0)
  *   deno task version tag          # Create and push git tag for current version
+ *   deno task version dev          # Create and push dev pre-release tag
  */
 
 import { join } from "@std/path";
@@ -145,6 +146,82 @@ async function bump(type: BumpType): Promise<void> {
   console.log("5. Tag: deno task version tag");
 }
 
+async function tagDev(): Promise<void> {
+  const version = await getCurrentVersion();
+  const timestamp = Math.floor(Date.now() / 1000);
+  const devVersion = `${version}-dev.${timestamp}`;
+  const tagName = `v${devVersion}`;
+
+  console.log("🏷️  Creating Dev Pre-release Tag\n");
+  console.log(`📦 Base Version: ${version}`);
+  console.log(`📦 Dev Version: ${devVersion}`);
+
+  // Check if working directory is clean
+  console.log("\n🔍 Checking git status...");
+  const isClean = await checkGitStatus();
+
+  if (!isClean) {
+    console.error(
+      "\n❌ Working directory is not clean. Please commit or stash your changes first.",
+    );
+    console.error("Run: git status");
+    Deno.exit(1);
+  }
+  console.log("✅ Working directory is clean");
+
+  // Check if tag already exists
+  console.log(`\n🔍 Checking if tag ${tagName} exists...`);
+  const tagExists = await checkTagExists(tagName);
+
+  if (tagExists) {
+    console.error(`\n❌ Tag ${tagName} already exists.`);
+    console.error(
+      `If you want to update the tag, delete it first with: git tag -d ${tagName} && git push origin :refs/tags/${tagName}`,
+    );
+    Deno.exit(1);
+  }
+  console.log(`✅ Tag ${tagName} does not exist yet`);
+
+  // Create tag
+  console.log(`\n🏷️  Creating tag ${tagName}...`);
+  const createResult = await runCommand([
+    "git",
+    "tag",
+    "-a",
+    tagName,
+    "-m",
+    `Dev pre-release ${devVersion}`,
+  ]);
+
+  if (!createResult.success) {
+    console.error(`\n❌ Failed to create tag ${tagName}`);
+    Deno.exit(1);
+  }
+  console.log(`✅ Created tag ${tagName}`);
+
+  // Push tag
+  console.log(`\n📤 Pushing tag ${tagName} to remote...`);
+  const pushResult = await runCommand(["git", "push", "origin", tagName]);
+
+  if (!pushResult.success) {
+    console.error(`\n❌ Failed to push tag ${tagName}`);
+    console.error("Cleaning up local tag...");
+    await runCommand(["git", "tag", "-d", tagName]);
+    Deno.exit(1);
+  }
+  console.log(`✅ Pushed tag ${tagName} to remote`);
+
+  console.log("\n✅ Dev pre-release tag created successfully!");
+  console.log(
+    `\n🚀 GitHub Actions will now publish version ${devVersion} to JSR.`,
+  );
+  console.log(
+    "   Check the progress at: https://github.com/TheSwanFactory/deno-hooks/actions",
+  );
+  console.log(`\n📦 Test installation with:`);
+  console.log(`   deno add @theswanfactory/deno-hooks@${devVersion}`);
+}
+
 async function tag(): Promise<void> {
   const version = await getCurrentVersion();
   const tagName = `v${version}`;
@@ -225,6 +302,7 @@ Usage:
   deno task version minor        Bump minor version (0.2.0 -> 0.3.0)
   deno task version major        Bump major version (0.2.0 -> 1.0.0)
   deno task version tag          Create and push git tag for current version
+  deno task version dev          Create and push dev pre-release tag
   deno task version help         Show this help message
 
 Examples:
@@ -237,6 +315,9 @@ Examples:
 
   # Create release tag
   deno task version tag
+
+  # Create dev pre-release (use 'deno task tag:dev' to run tests first)
+  deno task version dev
 `);
 }
 
@@ -256,6 +337,9 @@ try {
       break;
     case "tag":
       await tag();
+      break;
+    case "dev":
+      await tagDev();
       break;
     case "help":
     case "--help":

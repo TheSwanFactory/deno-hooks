@@ -7,6 +7,8 @@
 
 ## [Unreleased]
 
+## [0.2.1] - 2024-12-14
+
 ### Added
 
 - Version management script with `deno task version` command for displaying,

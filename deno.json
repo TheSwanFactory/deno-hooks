@@ -33,6 +33,7 @@
     "@std/path": "jsr:@std/path@^1.0.8",
     "@std/fs": "jsr:@std/fs@^1.0.8",
     "@std/expect": "jsr:@std/expect@^1.0.8",
+    "@std/semver": "jsr:@std/semver@^1.0.3",
     "deno-hooks": "./src/mod.ts"
   },
   "__comments": {

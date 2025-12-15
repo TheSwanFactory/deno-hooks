@@ -207,16 +207,44 @@ deno task version patch  # 0.3.0 -> 0.3.1
 deno task version minor  # 0.3.0 -> 0.4.0
 deno task version major  # 0.3.0 -> 1.0.0
 
-# Create and push release tag
+# Create and push dev pre-release tag (timestamp-based, merge-safe)
+deno task version dev    # 0.3.0 -> 0.3.0-dev.1734293847
+
+# Reset from dev version to stable
+deno task version reset  # 0.3.0-dev.1734293847 -> 0.3.0
+
+# Create and push stable release tag
 deno task version tag
 
 # Show help
 deno task version help
 ```
 
+**Dev Versioning**: Dev releases use timestamp-based identifiers (epoch seconds)
+like `0.3.0-dev.1734293847`. This ensures monotonic, merge-safe versions that
+won't conflict when multiple branches create dev releases simultaneously.
+
 ### Release Workflow
 
-#### Option 1: Automated version bump
+#### Dev Pre-release (for testing)
+
+Use dev releases to test JSR publication before stable releases:
+
+1. Create dev release: `deno task version dev`
+   - Generates timestamp-based version (e.g., `0.3.0-dev.1734293847`)
+   - Commits, tags, and pushes automatically
+2. Test the dev release:
+   `deno run -A jsr:@theswanfactory/deno-hooks@0.3.0-dev.1734293847`
+3. Reset to stable: `deno task version reset`
+   - Removes `-dev.timestamp` suffix
+   - Commits and pushes automatically
+
+**Note**: You cannot bump versions while on a dev/prerelease version. You must
+reset to stable first.
+
+#### Stable Release
+
+##### Option 1: Automated version bump
 
 1. Update version: `deno task version major` (for v1.0.0)
 2. Update `CHANGELOG.md` (move changes from `[Unreleased]` to new version)
@@ -224,7 +252,7 @@ deno task version help
 4. Push: `git push`
 5. Create tag: `deno task version tag`
 
-#### Option 2: Manual version in deno.json
+##### Option 2: Manual version in deno.json
 
 1. Edit `deno.json` to change version manually
 2. Update `CHANGELOG.md` (move changes from `[Unreleased]` to new version)

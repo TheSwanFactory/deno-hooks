@@ -26,5 +26,14 @@ jobs:
       - name: Run tests
         run: deno test -A
 
+      - name: Extract version from tag
+        id: get_version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
       - name: Publish to JSR
-        run: deno publish
+        run: |
+          if [[ "${{ steps.get_version.outputs.version }}" == *"-dev."* ]]; then
+            deno publish --set-version ${{ steps.get_version.outputs.version }}
+          else
+            deno publish
+          fi

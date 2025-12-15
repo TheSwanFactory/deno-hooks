@@ -291,7 +291,13 @@ async function tagDev(): Promise<void> {
 
   // Push commit and tag
   console.log(`\n📤 Pushing commit and tag to remote...`);
-  const pushResult = await runCommand(["git", "push", "origin", "HEAD", tagName]);
+  const pushResult = await runCommand([
+    "git",
+    "push",
+    "origin",
+    "HEAD",
+    tagName,
+  ]);
 
   if (!pushResult.success) {
     console.error(`\n❌ Failed to push commit and tag`);
@@ -319,7 +325,10 @@ async function tag(): Promise<void> {
   // Check if it's a dev version
   const devMatch = version.match(/^(.+)-dev\.(\d+)$/);
   if (devMatch) {
-    console.error("❌ Cannot create stable release tag for dev version:", version);
+    console.error(
+      "❌ Cannot create stable release tag for dev version:",
+      version,
+    );
     console.error("\nYou must reset to a stable version first.");
     console.error("Run: deno task version reset");
     console.error(`\nThis will reset from ${version} to ${devMatch[1]}`);

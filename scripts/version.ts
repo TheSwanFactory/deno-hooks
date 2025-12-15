@@ -218,8 +218,8 @@ async function tagDev(): Promise<void> {
   console.log(
     "   Check the progress at: https://github.com/TheSwanFactory/deno-hooks/actions",
   );
-  console.log(`\n📦 Test installation with:`);
-  console.log(`   deno add @theswanfactory/deno-hooks@${devVersion}`);
+  console.log(`\n📦 Test without modifying your config:`);
+  console.log(`   deno run -A jsr:@theswanfactory/deno-hooks@${devVersion}`);
 }
 
 async function tag(): Promise<void> {

@@ -7,6 +7,19 @@
 
 ## [Unreleased]
 
+### Added
+
+- Dev pre-release tagging workflow with `deno task tag-dev` for testing JSR
+  installations before stable releases
+- `deno task tag` command for creating stable releases with automated testing
+- `deno task test-all` combining unit and integration tests
+- GitHub Actions support for publishing dev pre-releases (e.g.,
+  `0.2.1-dev.1734197345`)
+
+### Changed
+
+- Removed duplicate `install` task from deno.json
+
 ## [0.2.1] - 2024-12-14
 
 ### Added

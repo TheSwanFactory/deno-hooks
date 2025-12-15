@@ -146,15 +146,29 @@ async function bump(type: BumpType): Promise<void> {
   console.log("5. Tag: deno task version tag");
 }
 
+function getNextDevVersion(currentVersion: string): string {
+  // Check if already a dev version (e.g., "0.2.1-dev.2")
+  const devMatch = currentVersion.match(/^(.+)-dev\.(\d+)$/);
+
+  if (devMatch) {
+    // Increment existing dev number
+    const baseVersion = devMatch[1];
+    const devNumber = parseInt(devMatch[2]);
+    return `${baseVersion}-dev.${devNumber + 1}`;
+  } else {
+    // Start new dev sequence from stable version
+    return `${currentVersion}-dev.1`;
+  }
+}
+
 async function tagDev(): Promise<void> {
-  const version = await getCurrentVersion();
-  const timestamp = Math.floor(Date.now() / 1000);
-  const devVersion = `${version}-dev.${timestamp}`;
+  const currentVersion = await getCurrentVersion();
+  const devVersion = getNextDevVersion(currentVersion);
   const tagName = `v${devVersion}`;
 
   console.log("🏷️  Creating Dev Pre-release Tag\n");
-  console.log(`📦 Base Version: ${version}`);
-  console.log(`📦 Dev Version: ${devVersion}`);
+  console.log(`📦 Current Version: ${currentVersion}`);
+  console.log(`📦 New Dev Version: ${devVersion}`);
 
   // Check if working directory is clean
   console.log("\n🔍 Checking git status...");
@@ -182,6 +196,26 @@ async function tagDev(): Promise<void> {
   }
   console.log(`✅ Tag ${tagName} does not exist yet`);
 
+  // Update version in deno.json
+  console.log(`\n📝 Updating deno.json to version ${devVersion}...`);
+  await updateVersion(devVersion);
+  console.log("✅ Updated deno.json");
+
+  // Commit the version change
+  console.log(`\n💾 Committing version change...`);
+  const commitResult = await runCommand([
+    "git",
+    "commit",
+    "-am",
+    `Bump version to ${devVersion} for JSR dev release`,
+  ]);
+
+  if (!commitResult.success) {
+    console.error(`\n❌ Failed to commit version change`);
+    Deno.exit(1);
+  }
+  console.log("✅ Committed version change");
+
   // Create tag
   console.log(`\n🏷️  Creating tag ${tagName}...`);
   const createResult = await runCommand([
@@ -199,17 +233,17 @@ async function tagDev(): Promise<void> {
   }
   console.log(`✅ Created tag ${tagName}`);
 
-  // Push tag
-  console.log(`\n📤 Pushing tag ${tagName} to remote...`);
-  const pushResult = await runCommand(["git", "push", "origin", tagName]);
+  // Push commit and tag
+  console.log(`\n📤 Pushing commit and tag to remote...`);
+  const pushResult = await runCommand(["git", "push", "origin", "HEAD", tagName]);
 
   if (!pushResult.success) {
-    console.error(`\n❌ Failed to push tag ${tagName}`);
+    console.error(`\n❌ Failed to push commit and tag`);
     console.error("Cleaning up local tag...");
     await runCommand(["git", "tag", "-d", tagName]);
     Deno.exit(1);
   }
-  console.log(`✅ Pushed tag ${tagName} to remote`);
+  console.log(`✅ Pushed commit and tag to remote`);
 
   console.log("\n✅ Dev pre-release tag created successfully!");
   console.log(

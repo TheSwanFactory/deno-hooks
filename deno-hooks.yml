@@ -15,8 +15,14 @@ hooks:
       pass_filenames: true
 
   pre-push:
-    # Run tests before pushing
+    # Run unit tests before pushing
     - id: test
-      name: test
+      name: unit tests
       run: deno-test
+      pass_filenames: false
+
+    # Run integration tests before pushing
+    - id: integration-test
+      name: integration tests
+      run: "deno run -A scripts/test-fake-repo.ts"
       pass_filenames: false

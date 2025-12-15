@@ -4,7 +4,6 @@
 
 import { expect } from "@std/expect";
 import { loadConfig } from "./config.ts";
-import { filterFiles, getStagedFiles } from "./files.ts";
 
 Deno.test("loadConfig - parses YAML configuration", async () => {
   // Use parent directory where deno-hooks.yml is located
@@ -13,24 +12,18 @@ Deno.test("loadConfig - parses YAML configuration", async () => {
   expect(config).toBeDefined();
   expect(config.hooks).toBeDefined();
   expect(config.hooks["pre-commit"]).toBeDefined();
+  expect(Array.isArray(config.hooks["pre-commit"])).toBe(true);
 });
 
-Deno.test("filterFiles - matches glob patterns", () => {
-  const files = [
-    "foo.ts",
-    "bar.js",
-    "baz.json",
-    "test.md",
-  ];
+Deno.test("loadConfig - validates commands are strings", async () => {
+  const rootDir = new URL("..", import.meta.url).pathname;
+  const config = await loadConfig(rootDir);
 
-  const tsFiles = filterFiles(files, "*.ts");
-  expect(tsFiles).toEqual(["foo.ts"]);
-
-  const codeFiles = filterFiles(files, "*.{ts,js}");
-  expect(codeFiles.sort()).toEqual(["bar.js", "foo.ts"]);
-});
-
-Deno.test("getStagedFiles - returns array", async () => {
-  const files = await getStagedFiles();
-  expect(Array.isArray(files)).toBe(true);
+  for (const commands of Object.values(config.hooks)) {
+    expect(Array.isArray(commands)).toBe(true);
+    for (const command of commands) {
+      expect(typeof command).toBe("string");
+      expect(command.trim().length).toBeGreaterThan(0);
+    }
+  }
 });

@@ -1,0 +1,30 @@
+# Advanced deno-hooks configuration
+# This example shows how to run custom commands and scripts
+
+hooks:
+  pre-commit:
+    # Run formatter
+    - deno fmt --check
+
+    # Run linter
+    - deno lint
+
+    # Run custom validation script
+    - deno run -A scripts/validate.ts
+
+    # You can also run non-deno commands
+    - npm run typecheck
+
+  pre-push:
+    # Run all tests
+    - deno task test
+
+    # Run integration tests
+    - deno task test:integration
+
+    # Run custom build verification
+    - ./scripts/verify-build.sh
+
+  commit-msg:
+    # Validate commit message format
+    - deno run -A scripts/validate-commit-msg.ts

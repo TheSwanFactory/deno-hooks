@@ -5,6 +5,58 @@
 > **Policy**: Concise entries for user-visible changes since last tag. One-line
 > per change. Ignore internal cleanup, specs, and test-only changes.
 
+## [Unreleased]
+
+## [0.3.0] - 2024-12-14
+
+### Changed
+
+- **BREAKING**: Major architectural simplification - hooks are now simple
+  command arrays instead of complex objects with glob patterns
+- **BREAKING**: Removed built-in hooks (`deno-fmt`, `deno-lint`, `deno-test`) -
+  use `deno task fmt`, `deno task lint`, `deno task test` instead
+- **BREAKING**: Configuration format simplified - hooks are now just arrays of
+  shell commands
+- Generated hook scripts are now self-contained with no dependencies on
+  deno-hooks runtime
+- Hook scripts use `set -e` for fail-fast behavior
+
+### Removed
+
+- File glob pattern matching and `pass_filenames` logic (file filtering is now
+  git's job)
+- Built-in hook executors (deno-fmt, deno-lint, deno-test)
+- Runtime execution system (src/run.ts, src/executor.ts, src/files.ts)
+- Complex hook type definitions
+
+### Added
+
+- Self-contained hook scripts that work without deno-hooks installed
+- Support for any shell command in hooks (not just deno commands)
+- Success message "✓ All hooks passed" after successful hook execution
+- New examples: advanced.yml and deno-json-config.json
+
+## [0.2.1] - 2024-12-14
+
+### Added
+
+- Dev pre-release tagging workflow with `deno task tag-dev` for testing JSR
+  installations before stable releases
+- `deno task tag` command for creating stable releases with automated testing
+- `deno task test-all` combining unit and integration tests
+- GitHub Actions support for publishing dev pre-releases (e.g.,
+  `0.2.1-dev.1734197345`)
+
+- Version management script with `deno task version` command for displaying,
+  bumping (patch/minor/major), and tagging releases
+
+### Fixed
+
+- Critical bug: JSR installations now generate valid hook paths with `jsr:`
+  protocol instead of invalid filesystem paths (fixes #9)
+- Integration tests now properly validate hook path formats to catch path
+  generation bugs
+
 ## [0.2.0] - 2024-12-14
 
 ### Changed

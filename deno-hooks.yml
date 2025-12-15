@@ -1,28 +1,11 @@
+# Deno Hooks Configuration
+# Learn more: https://jsr.io/@theswanfactory/deno-hooks
+
 hooks:
   pre-commit:
-    # Format code with deno fmt
-    - id: deno-fmt
-      name: deno fmt
-      run: deno-fmt
-      glob: "*.{ts,js,json,md}"
-      pass_filenames: true
-
-    # Lint code with deno lint
-    - id: deno-lint
-      name: deno lint
-      run: deno-lint
-      glob: "*.{ts,js}"
-      pass_filenames: true
+    - deno task fmt
+    - deno task lint
 
   pre-push:
-    # Run unit tests before pushing
-    - id: test
-      name: unit tests
-      run: deno-test
-      pass_filenames: false
-
-    # Run integration tests before pushing
-    - id: integration-test
-      name: integration tests
-      run: "deno run -A scripts/test-fake-repo.ts"
-      pass_filenames: false
+    - deno task test
+    - deno run -A scripts/test-fake-repo.ts

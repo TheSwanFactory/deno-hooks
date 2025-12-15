@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - "v*.*.*" # Triggers on version tags like v0.1.0, v1.2.3, etc.
+      - "v*.*.*-dev.*" # Triggers on dev pre-release tags like v0.2.1-dev.1734197345
 
 jobs:
   publish:
@@ -18,12 +19,21 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Deno
-        uses: denoland/setup-deno@v1
+        uses: denoland/setup-deno@v2
         with:
-          deno-version: v1.x
+          deno-version: v2.x
 
       - name: Run tests
         run: deno test -A
 
+      - name: Extract version from tag
+        id: get_version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
       - name: Publish to JSR
-        run: deno publish
+        run: |
+          if [[ "${{ steps.get_version.outputs.version }}" == *"-dev."* ]]; then
+            deno publish --set-version ${{ steps.get_version.outputs.version }}
+          else
+            deno publish
+          fi

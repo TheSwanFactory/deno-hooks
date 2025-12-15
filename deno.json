@@ -1,32 +1,41 @@
 {
   "name": "@theswanfactory/deno-hooks",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "exports": {
-    ".": "./src/mod.ts",
-    "./install": "./src/install.ts",
-    "./run": "./src/run.ts"
+    ".": "./src/mod.ts"
   },
   "tasks": {
-    "setup": "deno run -A src/install.ts",
-    "install": "deno run -A src/install.ts",
+    "hooks": "deno run -A deno-hooks",
+    "fmt": "deno fmt --check",
+    "lint": "deno lint",
     "test": "deno test -A",
     "test-integration": "deno run -A scripts/test-fake-repo.ts",
+    "test-all": "deno test -A && deno task test-integration",
     "coverage": "deno test -A --coverage=.coverage && deno coverage .coverage",
     "doc": "deno doc src/mod.ts",
-    "doc-coverage": "deno run -A scripts/doc-coverage.ts"
+    "doc-coverage": "deno run -A scripts/doc-coverage.ts",
+    "version": "deno run -A scripts/version.ts",
+    "tag": "deno task test-all && deno run -A scripts/version.ts tag",
+    "tag-dev": "deno task test-all && deno run -A scripts/version.ts dev"
   },
   "fmt": {
     "exclude": []
   },
   "lint": {
     "rules": {
-      "tags": ["recommended"]
+      "tags": [
+        "recommended"
+      ]
     }
   },
   "imports": {
     "@std/yaml": "jsr:@std/yaml@^1.0.5",
     "@std/path": "jsr:@std/path@^1.0.8",
     "@std/fs": "jsr:@std/fs@^1.0.8",
-    "@std/expect": "jsr:@std/expect@^1.0.8"
+    "@std/expect": "jsr:@std/expect@^1.0.8",
+    "deno-hooks": "./src/mod.ts"
+  },
+  "__comments": {
+    "imports.deno-hooks": "This points to local source for development. Users should use: \"deno-hooks\": \"jsr:@theswanfactory/deno-hooks@^0.3.0\" in their projects."
   }
 }

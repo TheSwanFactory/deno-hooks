@@ -5,31 +5,11 @@
 import { parse as parseYaml } from "@std/yaml";
 
 /**
- * Hook configuration
- */
-export interface Hook {
-  /** Unique identifier for the hook */
-  id: string;
-  /** Display name (defaults to id) */
-  name?: string;
-  /** Command to run or built-in hook name */
-  run: string;
-  /** File pattern to match (e.g., "*.ts") */
-  glob?: string;
-  /** Pass matched files as arguments */
-  pass_filenames?: boolean;
-  /** Exclude pattern */
-  exclude?: string;
-  /** Allow parallel execution */
-  parallel?: boolean;
-}
-
-/**
  * Complete configuration structure
  */
 export interface Config {
   hooks: {
-    [hookName: string]: Hook[];
+    [hookName: string]: string[];
   };
 }
 
@@ -99,38 +79,42 @@ function validateConfig(config: Config): void {
     throw new Error("Configuration must have a 'hooks' object");
   }
 
-  for (const [hookName, hooks] of Object.entries(config.hooks)) {
-    if (!Array.isArray(hooks)) {
-      throw new Error(`hooks.${hookName} must be an array`);
+  for (const [hookName, commands] of Object.entries(config.hooks)) {
+    if (!Array.isArray(commands)) {
+      throw new Error(`hooks.${hookName} must be an array of commands`);
     }
 
-    for (const hook of hooks) {
-      if (!hook.id) {
-        throw new Error(`Hook in ${hookName} missing required 'id' field`);
+    for (const command of commands) {
+      if (typeof command !== "string") {
+        throw new Error(
+          `Each command in hooks.${hookName} must be a string, got: ${typeof command}`,
+        );
       }
-      if (!hook.run) {
-        throw new Error(`Hook '${hook.id}' missing required 'run' field`);
+      if (command.trim() === "") {
+        throw new Error(
+          `Empty command found in hooks.${hookName}`,
+        );
       }
     }
   }
 }
 
 /**
- * Get hooks for a specific git hook trigger
+ * Get commands for a specific git hook trigger
  *
  * @param config - The loaded configuration
  * @param hookName - The git hook trigger name (e.g., "pre-commit")
- * @returns Array of hooks for this trigger (empty if none configured)
+ * @returns Array of commands for this trigger (empty if none configured)
  *
  * @example
  * ```ts
  * import { getHooksForTrigger, loadConfig } from "@theswanfactory/deno-hooks/config";
  *
  * const config = await loadConfig(".");
- * const hooks = getHooksForTrigger(config, "pre-commit");
- * console.log(`Found ${hooks.length} pre-commit hooks`);
+ * const commands = getHooksForTrigger(config, "pre-commit");
+ * console.log(`Found ${commands.length} pre-commit commands`);
  * ```
  */
-export function getHooksForTrigger(config: Config, hookName: string): Hook[] {
+export function getHooksForTrigger(config: Config, hookName: string): string[] {
   return config.hooks[hookName] || [];
 }

@@ -21,6 +21,9 @@
   "fmt": {
     "exclude": []
   },
+  "publish": {
+    "exclude": ["scripts/isolated-git-env.ts"]
+  },
   "lint": {
     "rules": {
       "tags": [

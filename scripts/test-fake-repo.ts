@@ -11,6 +11,7 @@
  */
 
 import { join } from "@std/path";
+import { isolatedGitEnv } from "./isolated-git-env.ts";
 
 const TEMP_DIR = "/tmp/deno-hooks-integration-test";
 const DENO_HOOKS_SRC = Deno.cwd();
@@ -24,41 +25,18 @@ interface TestResult {
 const results: TestResult[] = [];
 
 /**
- * Environment for every child process: the caller's environment without the
- * variables git lists in `git rev-parse --local-env-vars` (GIT_DIR,
- * GIT_WORK_TREE, GIT_INDEX_FILE, ...), and with a global config of our own.
- * This script runs from a pre-push hook, where git exports GIT_DIR in a linked
- * worktree; without this, git and the installer would act on that repository
- * instead of TEMP_DIR.
+ * Environment for every child process, from isolatedGitEnv(): no inherited
+ * repository variables, and a global config of our own. This script runs from
+ * a pre-push hook, where git exports GIT_DIR in a linked worktree; without
+ * this, git and the installer would act on that repository instead of
+ * TEMP_DIR.
  */
 let childEnv: Record<string, string> = {};
 let gitConfigDir: string | undefined;
 
 async function isolateEnv() {
-  const { stdout } = await new Deno.Command("git", {
-    args: ["rev-parse", "--local-env-vars"],
-    cwd: TEMP_DIR,
-    stdout: "piped",
-    stderr: "null",
-  }).output();
-  const localVars = new TextDecoder().decode(stdout).split("\n").filter(
-    Boolean,
-  );
-  if (!localVars.includes("GIT_DIR")) {
-    throw new Error("git rev-parse --local-env-vars did not list GIT_DIR");
-  }
-
-  const env = Deno.env.toObject();
-  for (const name of localVars) {
-    delete env[name];
-  }
-
   gitConfigDir = await Deno.makeTempDir({ prefix: "deno-hooks-gitconfig-" });
-  const globalConfig = join(gitConfigDir, "gitconfig");
-  await Deno.writeTextFile(globalConfig, "");
-  env.GIT_CONFIG_GLOBAL = globalConfig;
-  env.GIT_CONFIG_NOSYSTEM = "1";
-  childEnv = env;
+  childEnv = await isolatedGitEnv(gitConfigDir);
 }
 
 async function run(

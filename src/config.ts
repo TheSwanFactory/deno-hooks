@@ -5,12 +5,58 @@
 import { parse as parseYaml } from "@std/yaml";
 
 /**
+ * Where a `pre-commit` command runs
+ *
+ * - `staged` (default): in a temporary copy of the index, so the command sees
+ *   exactly what will be committed
+ * - `working`: in the real repository, as git runs hooks. Use it for commands
+ *   that modify files, or that need untracked files such as `.env` or
+ *   `node_modules`.
+ *
+ * Other hooks (`pre-push`, ...) always run in the repository.
+ */
+export type RunIn = "staged" | "working";
+
+/**
+ * A command with options, as an alternative to a plain command string
+ */
+export interface HookCommandOptions {
+  /** The shell command to run */
+  run: string;
+  /** Where to run it (default: `staged`) */
+  run_in?: RunIn;
+}
+
+/**
+ * A hook command: a shell command string, or a command with options
+ */
+export type HookCommand = string | HookCommandOptions;
+
+/**
  * Complete configuration structure
  */
 export interface Config {
   hooks: {
-    [hookName: string]: string[];
+    [hookName: string]: HookCommand[];
   };
+}
+
+/**
+ * A hook command with its defaults applied
+ */
+export interface NormalizedCommand {
+  /** The shell command to run */
+  run: string;
+  /** Where to run it */
+  run_in: RunIn;
+}
+
+/**
+ * Apply defaults to a hook command (`run_in` defaults to `staged`)
+ */
+export function normalizeCommand(command: HookCommand): NormalizedCommand {
+  if (typeof command === "string") return { run: command, run_in: "staged" };
+  return { run: command.run, run_in: command.run_in ?? "staged" };
 }
 
 /**
@@ -85,12 +131,24 @@ function validateConfig(config: Config): void {
     }
 
     for (const command of commands) {
-      if (typeof command !== "string") {
+      let run: unknown = command;
+      if (command !== null && typeof command === "object") {
+        run = (command as HookCommandOptions).run;
+        const runIn = (command as HookCommandOptions).run_in;
+        if (runIn !== undefined && runIn !== "staged" && runIn !== "working") {
+          throw new Error(
+            `run_in in hooks.${hookName} must be "staged" or "working", got: ${
+              JSON.stringify(runIn)
+            }`,
+          );
+        }
+      }
+      if (typeof run !== "string") {
         throw new Error(
-          `Each command in hooks.${hookName} must be a string, got: ${typeof command}`,
+          `Each command in hooks.${hookName} must be a string or an object with a string 'run', got: ${typeof run}`,
         );
       }
-      if (command.trim() === "") {
+      if (run.trim() === "") {
         throw new Error(
           `Empty command found in hooks.${hookName}`,
         );
@@ -115,6 +173,9 @@ function validateConfig(config: Config): void {
  * console.log(`Found ${commands.length} pre-commit commands`);
  * ```
  */
-export function getHooksForTrigger(config: Config, hookName: string): string[] {
+export function getHooksForTrigger(
+  config: Config,
+  hookName: string,
+): HookCommand[] {
   return config.hooks[hookName] || [];
 }

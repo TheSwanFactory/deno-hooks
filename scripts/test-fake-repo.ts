@@ -108,6 +108,10 @@ async function setup() {
 `;
   await Deno.writeTextFile(join(TEMP_DIR, "deno-hooks.yml"), config);
 
+  // pre-commit hooks run against the staged content, so the project's config
+  // must be tracked, as it is in a real project
+  await run(["git", "add", "deno.json", "deno-hooks.yml"]);
+
   // Install hooks from local source for integration testing
   // This tests the actual code changes before publishing
   // Use --yes to skip prompts
@@ -197,7 +201,12 @@ async function testHookCatchesBadFormatting() {
   }
 
   // Clean up
-  await run(["git", "reset", "HEAD", "bad.ts"]);
+  // `git reset HEAD` fails before the first commit; `rm --cached` would stage a
+  // deletion after it
+  const restored = await run(["git", "restore", "--staged", "bad.ts"]);
+  if (!restored.success) {
+    await run(["git", "rm", "-q", "--cached", "-f", "bad.ts"]);
+  }
   await Deno.remove(join(TEMP_DIR, "bad.ts"));
 }
 
@@ -233,7 +242,12 @@ console.log("hello");
   }
 
   // Clean up
-  await run(["git", "reset", "HEAD", "bad.ts"]);
+  // `git reset HEAD` fails before the first commit; `rm --cached` would stage a
+  // deletion after it
+  const restored = await run(["git", "restore", "--staged", "bad.ts"]);
+  if (!restored.success) {
+    await run(["git", "rm", "-q", "--cached", "-f", "bad.ts"]);
+  }
   await Deno.remove(join(TEMP_DIR, "bad.ts"));
 }
 
@@ -262,7 +276,7 @@ console.log(message);
       passed: false,
       error: "Hook rejected valid code",
     });
-    console.log("  FAIL: Hook rejected valid code\n");
+    console.log("  FAIL: Hook rejected valid code\n" + result.output);
   }
 }
 

@@ -155,6 +155,52 @@ Key features:
 - Direct commands - No indirection
 - Success message - Clear feedback
 
+**Pre-commit runs on what you are committing.** By default (`run_in: staged`)
+the `pre-commit` script copies the index (`git checkout-index --all`) into a
+temporary directory and runs your commands there, so only staged content is
+checked. Your working tree and index are never touched, and the copy is removed
+on exit. `git` inside a command still talks to the real repository (`GIT_DIR` is
+exported as an absolute path), and `git commit -a` and `git commit <paths>`
+check what they will commit.
+
+Things to know about the copy:
+
+- **Commands must only check.** A command that modifies files, such as
+  `deno fmt` without `--check` or `deno lint --fix`, now modifies only the
+  temporary copy: the hook passes and the fix is thrown away, so a config of
+  `- deno fmt` silently loses its formatting gate. Use check-only commands, or
+  `run_in: working` for a fixer.
+- Files your commands need must be tracked or staged. Untracked or ignored files
+  (`node_modules`, `.env`) are not in the copy; use `run_in: working` for
+  commands that need them.
+- Submodules come out as empty directories, and symlinks are copied as links
+  that may point back into the working tree.
+- Every tracked file is copied on every commit, and checkout filters (such as
+  `git lfs` smudge) run. In a large repo, use `run_in: working`.
+
+### Choosing where a command runs: `run_in`
+
+Give a command as an object to choose where it runs:
+
+```yaml
+hooks:
+  pre-commit:
+    - deno task fmt # default: run_in: staged
+    - run: deno task lint
+      run_in: staged
+    - run: deno fmt # a fixer: runs in the real repository, as git runs hooks
+      run_in: working
+    - run: ./scripts/needs-env.sh # needs .env or node_modules
+      run_in: working
+```
+
+- `staged` (default): in the temporary copy of the index, as described above.
+- `working`: in the real repository, with the working tree as it is. The copy is
+  only made if at least one command is `staged`.
+
+`run_in` only applies to `pre-commit`. Other hooks (such as `pre-push`) always
+run in the repository.
+
 ## Testing
 
 ### Unit Tests

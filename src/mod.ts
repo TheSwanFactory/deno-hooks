@@ -30,7 +30,12 @@
  */
 
 export { install } from "./install.ts";
-export type { Config } from "./config.ts";
+export type {
+  Config,
+  HookCommand,
+  HookCommandOptions,
+  RunIn,
+} from "./config.ts";
 
 // When run directly (e.g., deno run -A jsr:@theswanfactory/deno-hooks)
 // automatically run the installer

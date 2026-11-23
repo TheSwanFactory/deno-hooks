@@ -22,7 +22,7 @@
     "exclude": []
   },
   "publish": {
-    "exclude": ["scripts/isolated-git-env.ts"]
+    "exclude": ["**/*.test.ts", "scripts/"]
   },
   "lint": {
     "rules": {

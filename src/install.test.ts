@@ -101,7 +101,10 @@ Deno.test("install - writes hooks to the common hooks directory from a linked wo
     expect(hook).toContain("echo deno-hooks-test");
     // Nothing was written under the worktree's own .git
     expect((await Deno.stat(join(worktree, ".git"))).isFile).toBe(true);
-    await expect(Deno.stat(join(worktree, ".git/hooks"))).rejects.toThrow();
+    // `.git` is a file, so a path under it is NotADirectory, not NotFound.
+    await expect(Deno.stat(join(worktree, ".git/hooks"))).rejects.toThrow(
+      Deno.errors.NotADirectory,
+    );
   });
 });
 

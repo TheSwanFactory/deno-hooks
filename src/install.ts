@@ -81,7 +81,9 @@ async function getHooksDir(): Promise<string> {
     throw new Error(`Failed to get git hooks directory: ${error}`);
   }
 
-  // git may answer with a path relative to the current directory
+  // git may answer with a path relative to the current directory. The git
+  // command above and resolve() must share the process cwd: do not pass a
+  // `cwd` to the command without resolving against that same directory.
   return resolve(new TextDecoder().decode(stdout).trim());
 }
 
@@ -189,7 +191,7 @@ export async function install(options: InstallOptions = {}): Promise<void> {
   console.log("To customize, edit deno-hooks.yml in your project root.");
   if (verbose) {
     console.log(
-      "\nTip: You can test hooks manually by running them directly from .git/hooks/",
+      `\nTip: You can test hooks manually by running them directly from ${hooksDir}/`,
     );
   }
 }

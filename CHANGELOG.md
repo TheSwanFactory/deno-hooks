@@ -7,6 +7,17 @@
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-11-23
+
+### Fixed
+
+- `pre-commit` hooks now run against the staged content, in a temporary copy of
+  the index, instead of the working tree: an unrelated unstaged file no longer
+  blocks a commit, and an unformatted staged file can no longer slip through
+  because its working copy was fixed (hclang#538). Files the commands need must
+  be tracked (or staged); untracked files such as `node_modules` are not in the
+  copy.
+
 ## [0.3.1] - 2026-11-23
 
 ### Fixed

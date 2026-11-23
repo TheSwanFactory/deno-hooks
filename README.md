@@ -149,6 +149,13 @@ echo "✓ All hooks passed"
 - **Fail-fast**: `set -e` stops on first error
 - **Transparent**: Easy to read and debug
 
+**Pre-commit runs on what you are committing.** The `pre-commit` script first
+copies the index (`git checkout-index`) into a temporary directory and runs your
+commands there, so only staged content is checked. Your working tree and index
+are never touched, and the copy is removed on exit. Files your commands need
+must be tracked or staged; untracked files (for example `node_modules`) are not
+in the copy.
+
 ## Common Use Cases
 
 ### Format and Lint Before Commit

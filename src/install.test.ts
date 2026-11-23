@@ -121,3 +121,134 @@ Deno.test("install - writes hooks to core.hooksPath when it is set", async () =>
       .toThrow(Deno.errors.NotFound);
   });
 });
+
+// --- pre-commit checks the staged content ---------------------------------
+
+const FORMATTED = 'export const x = "a";\n';
+const UNFORMATTED = "export   const x  =  'a'\n";
+
+/** Repo whose pre-commit hook runs `deno fmt --check src/` */
+async function withFmtHook(fn: (fixture: Fixture) => Promise<void>) {
+  await withRepo(async (fixture) => {
+    const { repo, env } = fixture;
+    await Deno.writeTextFile(
+      join(repo, "deno-hooks.yml"),
+      `hooks:\n  pre-commit:\n    - "'${Deno.execPath()}' fmt --check src/"\n`,
+    );
+    await installHooks(repo, env);
+    await fn(fixture);
+  });
+}
+
+async function commit(
+  repo: string,
+  env: Record<string, string>,
+  ...extra: string[]
+): Promise<boolean> {
+  const { success } = await new Deno.Command("git", {
+    args: ["commit", "--quiet", "-m", "change", ...extra],
+    cwd: repo,
+    env,
+    clearEnv: true,
+    stdout: "null",
+    stderr: "null",
+  }).output();
+  return success;
+}
+
+Deno.test("pre-commit - passes when the staged file is formatted but the working copy is not", async () => {
+  await withFmtHook(async ({ repo, env }) => {
+    const file = join(repo, "src/a.ts");
+    await Deno.writeTextFile(file, FORMATTED);
+    await run("git", ["add", "src/a.ts"], repo, env);
+    await Deno.writeTextFile(file, UNFORMATTED);
+
+    expect(await commit(repo, env)).toBe(true);
+    // The unstaged working copy is left alone
+    expect(await Deno.readTextFile(file)).toBe(UNFORMATTED);
+  });
+});
+
+Deno.test("pre-commit - fails when the staged file is unformatted but the working copy was fixed", async () => {
+  await withFmtHook(async ({ repo, env }) => {
+    const file = join(repo, "src/a.ts");
+    await Deno.writeTextFile(file, UNFORMATTED);
+    await run("git", ["add", "src/a.ts"], repo, env);
+    await Deno.writeTextFile(file, FORMATTED);
+
+    expect(await commit(repo, env)).toBe(false);
+    // Nothing was committed, and the working copy and the index are intact
+    expect(await Deno.readTextFile(file)).toBe(FORMATTED);
+    const staged = await run("git", ["show", ":src/a.ts"], repo, env);
+    expect(staged).toBe(UNFORMATTED);
+    const log = await run("git", ["rev-list", "--count", "HEAD"], repo, env);
+    expect(log.trim()).toBe("1");
+  });
+});
+
+Deno.test("pre-commit - an unrelated unstaged or untracked bad file does not block the commit", async () => {
+  await withFmtHook(async ({ repo, env }) => {
+    // A tracked file that is modified, but not staged, in a bad way
+    await Deno.writeTextFile(join(repo, "src/other.ts"), FORMATTED);
+    await run("git", ["add", "src/other.ts"], repo, env);
+    await run("git", ["commit", "--quiet", "-m", "other"], repo, env);
+    await Deno.writeTextFile(join(repo, "src/other.ts"), UNFORMATTED);
+    // An untracked bad file
+    await Deno.writeTextFile(join(repo, "src/untracked.ts"), UNFORMATTED);
+    // The staged change
+    await Deno.writeTextFile(join(repo, "src/a.ts"), FORMATTED);
+    await run("git", ["add", "src/a.ts"], repo, env);
+
+    expect(await commit(repo, env)).toBe(true);
+    expect(await Deno.readTextFile(join(repo, "src/other.ts"))).toBe(
+      UNFORMATTED,
+    );
+    expect(await Deno.readTextFile(join(repo, "src/untracked.ts"))).toBe(
+      UNFORMATTED,
+    );
+  });
+});
+
+Deno.test("pre-commit - checks the staged part of a partially staged file", async () => {
+  await withFmtHook(async ({ repo, env }) => {
+    const file = join(repo, "src/a.ts");
+    await Deno.writeTextFile(file, FORMATTED);
+    await run("git", ["add", "src/a.ts"], repo, env);
+    // Unstaged edit on top of the staged content
+    await Deno.writeTextFile(file, FORMATTED + UNFORMATTED.replace("x", "y"));
+
+    expect(await commit(repo, env)).toBe(true);
+    const committed = await run("git", ["show", "HEAD:src/a.ts"], repo, env);
+    expect(committed).toBe(FORMATTED);
+    expect(await Deno.readTextFile(file)).toContain("'a'");
+  });
+});
+
+Deno.test("pre-commit - cleans up its temporary copy", async () => {
+  await withFmtHook(async ({ tempDir, repo, env }) => {
+    const tmp = join(tempDir, "tmp");
+    await Deno.mkdir(tmp);
+    const isolated = { ...env, TMPDIR: tmp };
+    await Deno.writeTextFile(join(repo, "src/a.ts"), UNFORMATTED);
+    await run("git", ["add", "src/a.ts"], repo, env);
+    expect(await commit(repo, isolated)).toBe(false);
+    await Deno.writeTextFile(join(repo, "src/a.ts"), FORMATTED);
+    await run("git", ["add", "src/a.ts"], repo, env);
+    expect(await commit(repo, isolated)).toBe(true);
+
+    const left = [...Deno.readDirSync(tmp)];
+    expect(left).toEqual([]);
+  });
+});
+
+Deno.test("pre-commit - `git commit -a` checks what it will commit", async () => {
+  await withFmtHook(async ({ repo, env }) => {
+    const file = join(repo, "src/a.ts");
+    await Deno.writeTextFile(file, FORMATTED);
+    await run("git", ["add", "src/a.ts"], repo, env);
+    await run("git", ["commit", "--quiet", "-m", "a"], repo, env);
+    await Deno.writeTextFile(file, UNFORMATTED);
+
+    expect(await commit(repo, env, "-a")).toBe(false);
+  });
+});

@@ -201,8 +201,12 @@ async function testHookCatchesBadFormatting() {
   }
 
   // Clean up
-  // `git reset HEAD` fails before the first commit; unstage with rm --cached
-  await run(["git", "rm", "-q", "--cached", "-f", "bad.ts"]);
+  // `git reset HEAD` fails before the first commit; `rm --cached` would stage a
+  // deletion after it
+  const restored = await run(["git", "restore", "--staged", "bad.ts"]);
+  if (!restored.success) {
+    await run(["git", "rm", "-q", "--cached", "-f", "bad.ts"]);
+  }
   await Deno.remove(join(TEMP_DIR, "bad.ts"));
 }
 
@@ -238,8 +242,12 @@ console.log("hello");
   }
 
   // Clean up
-  // `git reset HEAD` fails before the first commit; unstage with rm --cached
-  await run(["git", "rm", "-q", "--cached", "-f", "bad.ts"]);
+  // `git reset HEAD` fails before the first commit; `rm --cached` would stage a
+  // deletion after it
+  const restored = await run(["git", "restore", "--staged", "bad.ts"]);
+  if (!restored.success) {
+    await run(["git", "rm", "-q", "--cached", "-f", "bad.ts"]);
+  }
   await Deno.remove(join(TEMP_DIR, "bad.ts"));
 }
 

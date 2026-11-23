@@ -127,17 +127,27 @@ Deno.test("install - writes hooks to core.hooksPath when it is set", async () =>
 const FORMATTED = 'export const x = "a";\n';
 const UNFORMATTED = "export   const x  =  'a'\n";
 
-/** Repo whose pre-commit hook runs `deno fmt --check src/` */
-async function withFmtHook(fn: (fixture: Fixture) => Promise<void>) {
+const FMT_CHECK = `'${Deno.execPath()}' fmt --check src/`;
+
+/** Repo whose pre-commit hook runs the given YAML list items */
+async function withHook(
+  items: string,
+  fn: (fixture: Fixture) => Promise<void>,
+) {
   await withRepo(async (fixture) => {
     const { repo, env } = fixture;
     await Deno.writeTextFile(
       join(repo, "deno-hooks.yml"),
-      `hooks:\n  pre-commit:\n    - "'${Deno.execPath()}' fmt --check src/"\n`,
+      `hooks:\n  pre-commit:\n${items}`,
     );
     await installHooks(repo, env);
     await fn(fixture);
   });
+}
+
+/** Repo whose pre-commit hook runs `deno fmt --check src/` */
+function withFmtHook(fn: (fixture: Fixture) => Promise<void>) {
+  return withHook(`    - "${FMT_CHECK}"\n`, fn);
 }
 
 async function commit(
@@ -250,5 +260,105 @@ Deno.test("pre-commit - `git commit -a` checks what it will commit", async () =>
     await Deno.writeTextFile(file, UNFORMATTED);
 
     expect(await commit(repo, env, "-a")).toBe(false);
+  });
+});
+
+Deno.test("pre-commit - `git commit <paths>` checks only the paths it commits", async () => {
+  await withFmtHook(async ({ repo, env }) => {
+    const a = join(repo, "src/a.ts");
+    await Deno.writeTextFile(a, FORMATTED);
+    await run("git", ["add", "src/a.ts"], repo, env);
+    await run("git", ["commit", "--quiet", "-m", "a"], repo, env);
+    await Deno.writeTextFile(a, FORMATTED + "export const z = 1;\n");
+    // Staged and unformatted, but not part of this commit
+    await Deno.writeTextFile(join(repo, "src/b.ts"), UNFORMATTED);
+    await run("git", ["add", "src/b.ts"], repo, env);
+
+    expect(await commit(repo, env, "src/a.ts")).toBe(true);
+    const committed = await run(
+      "git",
+      ["show", "--name-only", "--format=", "HEAD"],
+      repo,
+      env,
+    );
+    expect(committed.trim()).toBe("src/a.ts");
+
+    // Committing the unformatted file by path fails
+    expect(await commit(repo, env, "src/b.ts")).toBe(false);
+  });
+});
+
+Deno.test("pre-commit - commands can run git inside the staged copy", async () => {
+  // `git diff --cached` lists the files being committed; a file that is not
+  // listed makes the hook fail, so a git that cannot find the repository does
+  // too.
+  const cmd = `git diff --cached --name-only | grep -qx src/a.ts`;
+  await withHook(`    - "${cmd}"\n`, async ({ repo, env }) => {
+    await Deno.writeTextFile(join(repo, "src/a.ts"), FORMATTED);
+    await run("git", ["add", "src/a.ts"], repo, env);
+    expect(await commit(repo, env)).toBe(true);
+
+    // Also with a relative GIT_DIR and from `git commit -a` (temporary index)
+    await Deno.writeTextFile(join(repo, "src/a.ts"), FORMATTED + "//\n");
+    expect(await commit(repo, { ...env, GIT_DIR: ".git" }, "-a")).toBe(true);
+  });
+});
+
+const FMT_FIX = `'${Deno.execPath()}' fmt src/`;
+
+Deno.test("pre-commit - run_in: working runs in the real repository", async () => {
+  const items = `    - run: "${FMT_FIX}"\n      run_in: working\n`;
+  await withHook(items, async ({ repo, env }) => {
+    const file = join(repo, "src/a.ts");
+    await Deno.writeTextFile(file, UNFORMATTED);
+    await run("git", ["add", "src/a.ts"], repo, env);
+
+    // The fixer passes and fixes the working copy, as before
+    expect(await commit(repo, env)).toBe(true);
+    expect(await Deno.readTextFile(file)).toBe(FORMATTED);
+    // No temporary copy is made when no command needs one
+    const hook = await Deno.readTextFile(join(repo, ".git/hooks/pre-commit"));
+    expect(hook).not.toContain("checkout-index");
+  });
+});
+
+Deno.test("pre-commit - run_in: working sees untracked files; staged does not", async () => {
+  const check = `test -f .env`;
+  await withHook(
+    `    - run: "${check}"\n      run_in: working\n`,
+    async ({ repo, env }) => {
+      await Deno.writeTextFile(join(repo, ".env"), "X=1\n");
+      await Deno.writeTextFile(join(repo, "src/a.ts"), FORMATTED);
+      await run("git", ["add", "src/a.ts"], repo, env);
+      expect(await commit(repo, env)).toBe(true);
+    },
+  );
+  await withHook(`    - "${check}"\n`, async ({ repo, env }) => {
+    await Deno.writeTextFile(join(repo, ".env"), "X=1\n");
+    await Deno.writeTextFile(join(repo, "src/a.ts"), FORMATTED);
+    await run("git", ["add", "src/a.ts"], repo, env);
+    expect(await commit(repo, env)).toBe(false);
+  });
+});
+
+Deno.test("pre-commit - a mixed config runs each command where it asks", async () => {
+  const items = `    - "${FMT_CHECK}"\n` +
+    `    - run: "test -f .env"\n      run_in: working\n` +
+    `    - run: "test ! -f .env"\n      run_in: staged\n`;
+  await withHook(items, async ({ repo, env }) => {
+    await Deno.writeTextFile(join(repo, ".env"), "X=1\n");
+    const file = join(repo, "src/a.ts");
+    await Deno.writeTextFile(file, FORMATTED);
+    await run("git", ["add", "src/a.ts"], repo, env);
+    await Deno.writeTextFile(file, UNFORMATTED);
+
+    // staged check passes on the staged copy; working and staged .env checks
+    // each see their own tree
+    expect(await commit(repo, env)).toBe(true);
+
+    // The staged command still gates: an unformatted staged file fails
+    await Deno.writeTextFile(file, UNFORMATTED);
+    await run("git", ["add", "src/a.ts"], repo, env);
+    expect(await commit(repo, env)).toBe(false);
   });
 });

@@ -11,6 +11,7 @@
  */
 
 import { join } from "@std/path";
+import { isolatedGitEnv } from "./isolated-git-env.ts";
 
 const TEMP_DIR = "/tmp/deno-hooks-integration-test";
 const DENO_HOOKS_SRC = Deno.cwd();
@@ -23,6 +24,21 @@ interface TestResult {
 
 const results: TestResult[] = [];
 
+/**
+ * Environment for every child process, from isolatedGitEnv(): no inherited
+ * repository variables, and a global config of our own. This script runs from
+ * a pre-push hook, where git exports GIT_DIR in a linked worktree; without
+ * this, git and the installer would act on that repository instead of
+ * TEMP_DIR.
+ */
+let childEnv: Record<string, string> = {};
+let gitConfigDir: string | undefined;
+
+async function isolateEnv() {
+  gitConfigDir = await Deno.makeTempDir({ prefix: "deno-hooks-gitconfig-" });
+  childEnv = await isolatedGitEnv(gitConfigDir);
+}
+
 async function run(
   cmd: string[],
   options?: { cwd?: string; expectFailure?: boolean },
@@ -30,6 +46,8 @@ async function run(
   const command = new Deno.Command(cmd[0], {
     args: cmd.slice(1),
     cwd: options?.cwd || TEMP_DIR,
+    env: childEnv,
+    clearEnv: true,
     stdout: "piped",
     stderr: "piped",
   });
@@ -48,6 +66,10 @@ async function cleanup() {
   } catch {
     // Ignore if doesn't exist
   }
+  if (gitConfigDir) {
+    await Deno.remove(gitConfigDir, { recursive: true });
+    gitConfigDir = undefined;
+  }
 }
 
 async function setup() {
@@ -58,6 +80,7 @@ async function setup() {
 
   // Create temp directory
   await Deno.mkdir(TEMP_DIR, { recursive: true });
+  await isolateEnv();
 
   // Initialize git repo
   await run(["git", "init"]);

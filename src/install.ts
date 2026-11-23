@@ -28,6 +28,7 @@
  */
 
 import { ensureDir } from "@std/fs";
+import { resolve } from "@std/path";
 import { loadConfig } from "./config.ts";
 
 /**
@@ -61,11 +62,38 @@ async function getGitRoot(): Promise<string> {
 }
 
 /**
+ * Get the directory git reads hooks from
+ *
+ * Asks git instead of building `<git root>/.git/hooks`: in a linked worktree
+ * `.git` is a file, and `core.hooksPath` can point somewhere else.
+ */
+async function getHooksDir(): Promise<string> {
+  const command = new Deno.Command("git", {
+    args: ["rev-parse", "--git-path", "hooks"],
+    stdout: "piped",
+    stderr: "piped",
+  });
+
+  const { success, stdout, stderr } = await command.output();
+
+  if (!success) {
+    const error = new TextDecoder().decode(stderr);
+    throw new Error(`Failed to get git hooks directory: ${error}`);
+  }
+
+  // git may answer with a path relative to the current directory. The git
+  // command above and resolve() must share the process cwd: do not pass a
+  // `cwd` to the command without resolving against that same directory.
+  return resolve(new TextDecoder().decode(stdout).trim());
+}
+
+/**
  * Install git hooks based on the project configuration
  *
  * This function:
  * 1. Validates that configuration exists (deno-hooks.yml or deno.json)
- * 2. Creates .git/hooks/ directory if needed
+ * 2. Creates the hooks directory git reports (`git rev-parse --git-path hooks`)
+ *    if needed
  * 3. Generates self-contained shell scripts for each configured hook
  * 4. Makes scripts executable (Unix/Linux/macOS)
  *
@@ -145,8 +173,8 @@ export async function install(options: InstallOptions = {}): Promise<void> {
     }
   }
 
-  // Ensure .git/hooks/ exists
-  const hooksDir = `${gitRoot}/.git/hooks`;
+  // Ensure the hooks directory exists
+  const hooksDir = await getHooksDir();
   await ensureDir(hooksDir);
   if (verbose) {
     console.log(`\nHooks directory: ${hooksDir}`);
@@ -163,7 +191,7 @@ export async function install(options: InstallOptions = {}): Promise<void> {
   console.log("To customize, edit deno-hooks.yml in your project root.");
   if (verbose) {
     console.log(
-      "\nTip: You can test hooks manually by running them directly from .git/hooks/",
+      `\nTip: You can test hooks manually by running them directly from ${hooksDir}/`,
     );
   }
 }

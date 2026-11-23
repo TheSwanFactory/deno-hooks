@@ -1,6 +1,6 @@
 {
   "name": "@theswanfactory/deno-hooks",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "exports": {
     ".": "./src/mod.ts"
   },
@@ -20,6 +20,9 @@
   },
   "fmt": {
     "exclude": []
+  },
+  "publish": {
+    "exclude": ["**/*.test.ts", "scripts/"]
   },
   "lint": {
     "rules": {

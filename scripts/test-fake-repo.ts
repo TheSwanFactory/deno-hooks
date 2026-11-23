@@ -23,6 +23,44 @@ interface TestResult {
 
 const results: TestResult[] = [];
 
+/**
+ * Environment for every child process: the caller's environment without the
+ * variables git lists in `git rev-parse --local-env-vars` (GIT_DIR,
+ * GIT_WORK_TREE, GIT_INDEX_FILE, ...), and with a global config of our own.
+ * This script runs from a pre-push hook, where git exports GIT_DIR in a linked
+ * worktree; without this, git and the installer would act on that repository
+ * instead of TEMP_DIR.
+ */
+let childEnv: Record<string, string> = {};
+let gitConfigDir: string | undefined;
+
+async function isolateEnv() {
+  const { stdout } = await new Deno.Command("git", {
+    args: ["rev-parse", "--local-env-vars"],
+    cwd: TEMP_DIR,
+    stdout: "piped",
+    stderr: "null",
+  }).output();
+  const localVars = new TextDecoder().decode(stdout).split("\n").filter(
+    Boolean,
+  );
+  if (!localVars.includes("GIT_DIR")) {
+    throw new Error("git rev-parse --local-env-vars did not list GIT_DIR");
+  }
+
+  const env = Deno.env.toObject();
+  for (const name of localVars) {
+    delete env[name];
+  }
+
+  gitConfigDir = await Deno.makeTempDir({ prefix: "deno-hooks-gitconfig-" });
+  const globalConfig = join(gitConfigDir, "gitconfig");
+  await Deno.writeTextFile(globalConfig, "");
+  env.GIT_CONFIG_GLOBAL = globalConfig;
+  env.GIT_CONFIG_NOSYSTEM = "1";
+  childEnv = env;
+}
+
 async function run(
   cmd: string[],
   options?: { cwd?: string; expectFailure?: boolean },
@@ -30,6 +68,8 @@ async function run(
   const command = new Deno.Command(cmd[0], {
     args: cmd.slice(1),
     cwd: options?.cwd || TEMP_DIR,
+    env: childEnv,
+    clearEnv: true,
     stdout: "piped",
     stderr: "piped",
   });
@@ -48,6 +88,10 @@ async function cleanup() {
   } catch {
     // Ignore if doesn't exist
   }
+  if (gitConfigDir) {
+    await Deno.remove(gitConfigDir, { recursive: true });
+    gitConfigDir = undefined;
+  }
 }
 
 async function setup() {
@@ -58,6 +102,7 @@ async function setup() {
 
   // Create temp directory
   await Deno.mkdir(TEMP_DIR, { recursive: true });
+  await isolateEnv();
 
   // Initialize git repo
   await run(["git", "init"]);

@@ -7,6 +7,15 @@
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-22
+
+### Fixed
+
+- Installing hooks from a linked git worktree no longer fails; hooks go to the
+  shared hooks directory (#13)
+- Hooks are installed into `core.hooksPath` when it is set, where git looks for
+  them (#13)
+
 ## [0.3.0] - 2024-12-14
 
 ### Changed
